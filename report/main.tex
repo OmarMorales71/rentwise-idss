@@ -1,0 +1,73 @@
+\documentclass[12pt,a4paper]{report}
+
+% --- Language and page setup ---
+\usepackage[english]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+
+% --- Links and bibliography ---
+\usepackage[hidelinks]{hyperref}
+\usepackage[
+    backend=biber,
+    style=ieee,
+    sorting=none
+]{biblatex}
+\addbibresource{references.bib}
+
+\begin{document}
+
+% ==================================================
+% Cover page
+% ==================================================
+\begin{titlepage}
+    \centering
+
+    \vspace*{2cm}
+
+    {\Large Universitat Politècnica de Catalunya (UPC)\par}
+    \vspace{1.5cm}
+
+    {\huge\bfseries RentWise\par}
+    \vspace{0.5cm}
+    {\Large Intelligent Decision Support System for Apartment Evaluation\par}
+
+    \vspace{2cm}
+
+    {\large\bfseries Course\par}
+    \vspace{0.3cm}
+    {\large Intelligent Decision Support System\par}
+
+    \vfill
+
+    {\large\bfseries Team members\par}
+    \vspace{0.5cm}
+    \begin{tabular}{c}
+        Member 1: [Full name] \\
+        Member 2: [Full name] \\
+        Member 3: [Full name] \\
+        Member 4: [Full name] \\
+        Member 5: [Full name]
+    \end{tabular}
+
+    \vfill
+
+    {\large \today\par}
+
+\end{titlepage}
+
+% ==================================================
+% Table of contents
+% ==================================================
+\pagenumbering{roman}
+\tableofcontents
+\clearpage
+
+% ==================================================
+% Bibliography
+% ==================================================
+\pagenumbering{arabic}
+\printbibliography[heading=bibintoc,title={Bibliography}]
+
+\end{document}
