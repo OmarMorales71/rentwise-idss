@@ -8,6 +8,14 @@ The user provides an apartment listing and their preferences. The system evaluat
 - **Review** — more information or comparable listings are needed, or some aspects require closer consideration.
 - **Skip** — the apartment fails a mandatory requirement or appears to offer poor value when sufficient comparison data is available.
 
+## Setup (uv)
+*I (lars) preferably use uv. The same setup can be done using other tools like pip or conda*
+
+1. Install [uv](https://docs.astral.sh/uv/getting-started/installation/) (e.g. `brew install uv`).
+2. In the repo root run `uv sync`. This creates `.venv/` with Python 3.12 and all dependencies from `pyproject.toml` / `uv.lock`.
+3. Run code with `uv run python src/preprocessing.py`, or select `.venv` as the kernel/interpreter in VS Code for the notebooks.
+4. Add a package with `uv add <package>` (commit `pyproject.toml` and `uv.lock`).
+
 ## Dataset
 
 The project uses the **Apartment for Rent Classified** dataset from the UCI Machine Learning Repository:

@@ -251,3 +251,9 @@ build/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Data files (raw CSV is >100MB, too big for GitHub)
+data/raw/*.csv
+data/processed/
+
+*.7z
