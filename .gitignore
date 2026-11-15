@@ -251,3 +251,7 @@ build/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Raw dataset extracted from dataset/raw/apartment.zip (102 MB, over the GitHub file limit)
+dataset/raw/*.csv
+dataset/raw/*.7z

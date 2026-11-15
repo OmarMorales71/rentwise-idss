@@ -17,7 +17,7 @@ The project uses the **Apartment for Rent Classified** dataset from the UCI Mach
 - Geographic scope: United States
 - Data period: historical rental listings from 2019
 
-The dataset includes listing attributes such as rent, square footage, bedrooms, bathrooms, location and amenities. The exact files and version used by the team should be recorded in `data/raw/README.md`.
+The dataset includes listing attributes such as rent, square footage, bedrooms, bathrooms, location and amenities. The exact files and version used, the cleaning steps and a summary of the clean data are in [`dataset/README.md`](dataset/README.md).
 
 **Important limitation:** The dataset contains historical asking rents, not current market rents or confirmed final rental prices. Any estimate produced by this project should be interpreted in the context of the dataset's coverage and time period.
 
@@ -25,14 +25,19 @@ The dataset includes listing attributes such as rent, square footage, bedrooms, 
 
 ```text
 rentwise-idss/
-├── data/
-│   └── raw/
-│       └── README.md
+├── dataset/
+│   ├── raw/               original UCI files, never modified
+│   ├── processed/         clean data and raw vs clean report
+│   └── README.md          source, cleaning steps and clean data summary
+├── scripts/
+│   └── clean_dataset.py   builds dataset/processed/ from dataset/raw/
+├── report/
 ├── README.md
-└── data_and_tools_selection.md
+├── data_and_tools_selection.md
+└── requirements.txt
 ```
 
-Place the original dataset files in `data/raw/`. Keep this folder unchanged: do not clean, transform, rename or overwrite the original data. Processed data and analysis outputs should be stored separately in later project stages.
+Keep `dataset/raw/` unchanged: do not clean, transform, rename or overwrite the original data. To rebuild the clean data, run `python scripts/clean_dataset.py`.
 
 ## Proposed methods and tools
 
