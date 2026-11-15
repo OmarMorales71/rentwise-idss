@@ -13,7 +13,7 @@ The user provides an apartment listing and their preferences. The system evaluat
 
 1. Install [uv](https://docs.astral.sh/uv/getting-started/installation/) (e.g. `brew install uv`).
 2. In the repo root run `uv sync`. This creates `.venv/` with Python 3.12 and all dependencies from `pyproject.toml` / `uv.lock`.
-3. Run code with `uv run python src/preprocessing.py`, or select `.venv` as the kernel/interpreter in VS Code for the notebooks.
+3. Run code with `uv run python scripts/clean_dataset.py`, or select `.venv` as the kernel/interpreter in VS Code for the notebooks.
 4. Add a package with `uv add <package>` (commit `pyproject.toml` and `uv.lock`).
 
 ## Dataset
@@ -25,7 +25,7 @@ The project uses the **Apartment for Rent Classified** dataset from the UCI Mach
 - Geographic scope: United States
 - Data period: historical rental listings from 2019
 
-The dataset includes listing attributes such as rent, square footage, bedrooms, bathrooms, location and amenities. The exact files and version used by the team should be recorded in `data/raw/README.md`.
+The dataset includes listing attributes such as rent, square footage, bedrooms, bathrooms, location and amenities. The exact files and version used, the cleaning steps and a summary of the clean data are in [`dataset/README.md`](dataset/README.md).
 
 **Important limitation:** The dataset contains historical asking rents, not current market rents or confirmed final rental prices. Any estimate produced by this project should be interpreted in the context of the dataset's coverage and time period.
 
@@ -33,14 +33,22 @@ The dataset includes listing attributes such as rent, square footage, bedrooms, 
 
 ```text
 rentwise-idss/
-├── data/
-│   └── raw/
-│       └── README.md
+├── dataset/
+│   ├── raw/               original UCI files, never modified
+│   ├── processed/         clean data and raw vs clean report
+│   └── README.md          source, cleaning steps and clean data summary
+├── notebooks/
+│   └── 01_eda_preprocessing.ipynb   exploratory analysis of raw and clean data
+├── scripts/
+│   └── clean_dataset.py   builds dataset/processed/ from dataset/raw/
+├── report/
 ├── README.md
-└── data_and_tools_selection.md
+├── data_and_tools_selection.md
+├── pyproject.toml / uv.lock   dependencies (see Setup)
+└── requirements.txt
 ```
 
-Place the original dataset files in `data/raw/`. Keep this folder unchanged: do not clean, transform, rename or overwrite the original data. Processed data and analysis outputs should be stored separately in later project stages.
+Keep `dataset/raw/` unchanged: do not clean, transform, rename or overwrite the original data. To rebuild the clean data, run `uv run python scripts/clean_dataset.py`.
 
 ## Proposed methods and tools
 

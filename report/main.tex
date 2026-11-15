@@ -140,22 +140,108 @@
 \chapter{Description of the Domain of Application}
 \label{ch:domain}
 
-\section{Domain Overview}
-[Describe the application domain, its context, relevant stakeholders, and why the problem matters.]
+The Intelligent Decision Support System (IDSS) developed in this project,
+\emph{RentWise}, operates within the domain of residential rental
+housing, with a particular focus on the assessment of individual
+apartment listings by prospective renters. Renting a home is one of the
+largest recurring financial commitments a household makes, yet the decision
+is usually taken quickly, with partial information, and against asking
+prices set by the advertiser. The goal of the IDSS is to transform
+historical listing data and the renter's own requirements into an
+explainable recommendation on whether a listing deserves further attention.
 
-\section{Problem Statement}
-[Define the concrete problem addressed by the system. Explain the current situation and the limitations of existing decision-making processes.]
+\section{Market and Data Context}
 
-\section{Objectives and Scope}
+The system targets the United States apartment rental market as
+represented by classified advertisements. A renter typically finds a listing
+on a portal and must judge two things on their own: whether the
+asking rent is reasonable for what is offered, and whether the
+apartment fits their personal requirements. Asking rents vary
+strongly with location, size, and amenities, so a price that is ordinary in
+one city may be excessive in another. Without access to comparable listings,
+the renter has little evidence with which to tell them apart.
+
+The evidence base of the IDSS is the \emph{Apartment for Rent Classified}
+dataset from the UCI Machine Learning Repository
+\cite{uci_apartment_dataset}, in its version of approximately 100{,}000
+listings. Each record describes one advertised apartment through attributes
+such as:
+
 \begin{itemize}[leftmargin=*]
-  \item \textbf{General objective:} [Main objective of the IDSS.]
-  \item \textbf{Specific objective 1:} [Objective.]
-  \item \textbf{Specific objective 2:} [Objective.]
-  \item \textbf{Scope and assumptions:} [What is and is not covered.]
+  \item \textbf{Price} --- the advertised monthly asking rent;
+  \item \textbf{Size and layout} --- square footage, number of bedrooms and
+  bathrooms;
+  \item \textbf{Location} --- city, state, and geographic coordinates;
+  \item \textbf{Amenities and policies} --- listed amenities and pet policy.
 \end{itemize}
 
-\section{Available Data and Information}
-[Summarize the available datasets, databases, expert knowledge, and any important data availability constraints.]
+Two properties of this source bound every conclusion drawn from it. The
+listings are historical, dating from 2019, and they record
+asking rents, not the rents finally agreed between landlord and
+tenant. The estimates produced by the IDSS are therefore interpreted as
+reference values within the market and period covered by the data, not as
+current market prices.
+
+\section{Decision Objectives and Constraints}
+
+Supporting a renter's decision requires balancing two competing priorities:
+
+\subsection*{Financial Protection: Avoiding Poor-Value Listings}
+
+Committing to an overpriced or unsuitable apartment has lasting
+consequences: a rental contract ties the renter to a monthly cost and a
+dwelling for months or years. For this reason, the IDSS checks the asking
+rent against comparable listings and treats the renter's mandatory
+requirements, such as the maximum budget or the minimum number of bedrooms,
+as hard constraints. A listing that fails one of them is not rescued by
+strong performance on optional preferences.
+
+\subsection*{Opportunity Preservation: Avoiding Unjustified Rejections}
+
+Discarding a suitable apartment also has a cost, because good listings are
+scarce and are taken quickly. The system must not reject a listing on weak
+evidence. When too few comparable listings are available, or when important
+listing details are missing, the IDSS reports the uncertainty and asks the
+renter to look closer instead of issuing a negative price judgement.
+
+These dual objectives shape the design of the rent-estimation,
+requirement-checking, and recommendation components of the IDSS. In both
+cases the system acts as a decision-support tool: it presents a
+recommendation and the reasons behind it, while the decision to contact the
+advertiser, arrange a viewing, or apply remains with the renter.
+
+\section{Recommendation Classes}
+
+The outcome of the assessment is expressed through three recommendation
+classes. They combine the price assessment, the personal-fit assessment, and
+the amount of evidence available, as outlined in Table~\ref{tab:recommendation-classes}.
+
+\begin{table}[H]
+\centering
+\caption{Recommendation classes produced by the RentWise IDSS.}
+\label{tab:recommendation-classes}
+\begin{tabularx}{\textwidth}{p{2.2cm} X X}
+\toprule
+\textbf{Class} & \textbf{Condition} & \textbf{Implication for the renter}\\
+\midrule
+Shortlist &
+All mandatory requirements are met, personal fit is good, and the asking
+rent is reasonable relative to comparable listings. &
+The listing is worth pursuing: contact the advertiser or arrange a
+viewing.\\
+\addlinespace
+Review &
+Comparable evidence is limited, important listing information is missing,
+or the price or fit assessment is uncertain. &
+No firm judgement is supported: gather more information before deciding.\\
+\addlinespace
+Skip &
+A mandatory requirement is not met, or the listing is significantly
+overpriced according to sufficient comparable evidence. &
+The listing can be set aside so that effort goes to better candidates.\\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 % ============================================================
 % 2. DECISIONS
