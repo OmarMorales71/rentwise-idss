@@ -1,73 +1,764 @@
 \documentclass[12pt,a4paper]{report}
 
-% --- Language and page setup ---
-\usepackage[english]{babel}
-\usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
-\usepackage{geometry}
-\geometry{margin=2.5cm}
+% ============================================================
+% OVERLEAF TEMPLATE — PRACTICAL WORK 3 (IDSS)
+% Compile with pdfLaTeX. Replace all [PLACEHOLDERS].
+% ============================================================
 
-% --- Links and bibliography ---
-\usepackage[hidelinks]{hyperref}
-\usepackage[
-    backend=biber,
-    style=ieee,
-    sorting=none
-]{biblatex}
-\addbibresource{references.bib}
+% ---------- Packages ----------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{amsmath,amssymb}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,calc}
+\usepackage{pgfgantt}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{float}
+
+% ---------- Project metadata: EDIT THESE ----------
+\newcommand{\worktitle}{[Full title of your IDSS project]}
+\newcommand{\teamnumber}{[Team number]}
+\newcommand{\course}{Intelligent Decision Support Systems}
+\newcommand{\degree}{Master in Artificial Intelligence}
+\newcommand{\institution}{UPC -- URV -- UB}
+\newcommand{\semester}{Fall semester [YEAR]}
+\newcommand{\submissiondate}{[Submission date]}
+
+% ---------- Formatting ----------
+\definecolor{linkblue}{RGB}{20,70,125}
+\definecolor{lightgray}{RGB}{245,247,250}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=linkblue,
+  citecolor=linkblue,
+  urlcolor=linkblue,
+  pdftitle={\worktitle},
+  pdfauthor={[Team members]}
+}
+\onehalfspacing
+\setlength{\parskip}{0.35em}
+\setlength{\parindent}{0pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small PW3 -- IDSS}
+\fancyhead[R]{\small Team \teamnumber}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\titleformat{\chapter}[display]
+  {\normalfont\bfseries\Huge}{\chaptername\ \thechapter}{10pt}{\Huge}
+
+% ---------- Diagram styles ----------
+\tikzset{
+  block/.style={rectangle,rounded corners,draw=linkblue,fill=blue!5,
+    text width=3.0cm,minimum height=1cm,align=center},
+  process/.style={rectangle,draw=black!65,fill=gray!8,
+    text width=3.2cm,minimum height=0.9cm,align=center},
+  decision/.style={diamond,aspect=2,draw=black!65,fill=yellow!12,align=center},
+  arrow/.style={-{Stealth[length=2.5mm]},thick}
+}
+
+% ---------- Code listing style ----------
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue!70!black},
+  commentstyle=\color{green!40!black},
+  showstringspaces=false
+}
 
 \begin{document}
 
-% ==================================================
-% Cover page
-% ==================================================
+% ============================================================
+% TITLE PAGE
+% ============================================================
 \begin{titlepage}
-    \centering
-
-    \vspace*{2cm}
-
-    {\Large Universitat Politècnica de Catalunya (UPC)\par}
-    \vspace{1.5cm}
-
-    {\huge\bfseries RentWise\par}
-    \vspace{0.5cm}
-    {\Large Intelligent Decision Support System for Apartment Evaluation\par}
-
-    \vspace{2cm}
-
-    {\large\bfseries Course\par}
-    \vspace{0.3cm}
-    {\large Intelligent Decision Support System\par}
-
-    \vfill
-
-    {\large\bfseries Team members\par}
-    \vspace{0.5cm}
-    \begin{tabular}{c}
-        Member 1: [Full name] \\
-        Member 2: [Full name] \\
-        Member 3: [Full name] \\
-        Member 4: [Full name] \\
-        Member 5: [Full name]
-    \end{tabular}
-
-    \vfill
-
-    {\large \today\par}
-
+  \centering
+  {\large \institution\par}
+  \vspace{0.4cm}
+  {\large \degree\par}
+  {\large \course\par}
+  {\large \semester\par}
+  \vspace{2.0cm}
+  {\Huge\bfseries Practical Work 3\par}
+  \vspace{0.5cm}
+  {\LARGE Building an Intelligent Decision Support System\par}
+  \vspace{1.2cm}
+  {\Large\bfseries \worktitle\par}
+  \vspace{1.5cm}
+  {\large Team \teamnumber\par}
+  \vspace{0.5cm}
+  \begin{tabular}{c}
+    \textbf{Team members}\\[0.2cm]
+    [Full name 1]\\
+    {[Full name 2]}\\
+    {[Full name 3]}\\
+    {[Full name 4]}\\
+    {[Full name 5, if applicable]}
+  \end{tabular}
+  \vfill
+  {\large \submissiondate\par}
 \end{titlepage}
 
-% ==================================================
-% Table of contents
-% ==================================================
 \pagenumbering{roman}
-\tableofcontents
-\clearpage
+\chapter*{Abstract}
+[Write a concise summary of the problem domain, the decision-making problem, the proposed IDSS, the data and methods used, the main results, and the conclusions.]
 
-% ==================================================
-% Bibliography
-% ==================================================
+\textbf{Keywords:} Intelligent Decision Support System; [domain]; [method]; [data-driven model]; [knowledge-based component].
+
+\chapter*{Team Contributions}
+[Briefly summarize how the work was coordinated and how the members contributed. The detailed task assignment and time sheet are provided in \cref{ch:teamwork}.]
+
+\tableofcontents
+\listoffigures
+\listoftables
+\clearpage
 \pagenumbering{arabic}
-\printbibliography[heading=bibintoc,title={Bibliography}]
+
+% ============================================================
+% 1. DOMAIN OF APPLICATION
+% ============================================================
+\chapter{Description of the Domain of Application}
+\label{ch:domain}
+
+\section{Domain Overview}
+[Describe the application domain, its context, relevant stakeholders, and why the problem matters.]
+
+\section{Problem Statement}
+[Define the concrete problem addressed by the system. Explain the current situation and the limitations of existing decision-making processes.]
+
+\section{Objectives and Scope}
+\begin{itemize}[leftmargin=*]
+  \item \textbf{General objective:} [Main objective of the IDSS.]
+  \item \textbf{Specific objective 1:} [Objective.]
+  \item \textbf{Specific objective 2:} [Objective.]
+  \item \textbf{Scope and assumptions:} [What is and is not covered.]
+\end{itemize}
+
+\section{Available Data and Information}
+[Summarize the available datasets, databases, expert knowledge, and any important data availability constraints.]
+
+% ============================================================
+% 2. DECISIONS
+% ============================================================
+\chapter{Main Identified Decisions}
+\label{ch:decisions}
+
+[Identify the decisions that the system is intended to support. Explain who makes each decision, when it is made, what information is needed, and what the possible outcomes are.]
+
+\begin{table}[H]
+\centering
+\caption{Main decisions supported by the proposed IDSS.}
+\label{tab:decisions}
+\begin{tabularx}{\textwidth}{p{0.7cm} p{3cm} p{2.5cm} X}
+\toprule
+\textbf{ID} & \textbf{Decision} & \textbf{Decision-maker} & \textbf{Information required / expected output}\\
+\midrule
+D1 & [Decision 1] & [Actor] & [Information and output]\\
+D2 & [Decision 2] & [Actor] & [Information and output]\\
+D3 & [Decision 3] & [Actor] & [Information and output]\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ============================================================
+% 3. FUNCTIONAL ARCHITECTURE
+% ============================================================
+\chapter{Functional Architecture of the IDSS Prototype}
+
+\section{System Actors and User Roles}
+
+The prototype supports people comparing rental listings against their
+budget and housing requirements. It provides decision support by combining
+an estimated market rent with checks against the user's stated preferences.
+The system presents a recommendation and its reasons; the user remains
+responsible for deciding whether to contact the advertiser, arrange a
+viewing, or submit an application.
+
+\begin{table}[htbp]
+\centering
+\caption{Actors, responsibilities, and system functionalities.}
+\label{tab:actors}
+\begin{tabularx}{\textwidth}{p{0.18\textwidth} X X}
+\toprule
+\textbf{Actor} & \textbf{Responsibilities} & \textbf{System functionalities} \\
+\midrule
+Renter / decision-maker &
+Defines the maximum monthly budget, preferred location, minimum
+floor area, bedroom requirements, and required amenities. Reviews
+the evidence and makes the final housing decision. &
+Enters or selects a listing; sets and edits preferences; views the
+estimated rent range, comparable listings, requirement checks, and
+recommendation; records viewing or offer outcomes when available. \\
+\addlinespace
+System administrator / data maintainer &
+Maintains the application, prepares or imports listing data, and
+monitors data quality and model behaviour. &
+Loads and validates the dataset; runs the preprocessing and model
+pipeline; updates the model and decision rules; checks errors and
+coverage; maintains the web application. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{General Architecture}
+
+The prototype follows a user-centred decision-support architecture. Its
+data component stores rental listings and prepares the fields needed for
+analysis. The data-driven component estimates a reference rent for a
+listing from comparable observations. The knowledge-based component
+applies explicit rules to compare the listing with the user's budget and
+must-have requirements. A decision-support component combines these
+outputs into a recommendation, while the interface presents the result
+and its supporting evidence.
+
+The initial data source is the UCI \emph{Apartment for Rent Classified}
+dataset. It includes listing attributes such as price, square footage,
+bedrooms, bathrooms, amenities, city, state, coordinates, and listing
+time. The repository describes the listings as being in the United
+States; consequently, estimates from this dataset are interpreted in
+the market and currency represented by its records. They should not be
+presented as validated estimates for another country or currency
+\cite{uci_apartment_dataset}.
+
+The data-driven component uses listing characteristics and location to
+estimate a reference asking rent. The prototype should show a range and
+nearby or otherwise similar listings when the available comparable data
+supports doing so. If there are too few comparable records, or important
+listing details are unavailable, the system marks the estimate as
+uncertain and directs the user to review the listing.
+
+The knowledge-based component evaluates user-defined constraints. It
+checks whether the rent is within budget and whether the listing meets
+minimum space, bedroom, location, and required-amenity preferences.
+These checks are kept distinct from the rent estimate so the user can
+see how each part affects the recommendation.
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+  >=Stealth,
+  node distance=1.5cm and 1.7cm,
+  block/.style={
+    draw,
+    rounded corners,
+    align=center,
+    minimum width=3.3cm,
+    minimum height=1.15cm,
+    text width=3.1cm
+  },
+  user/.style={block, fill=blue!12},
+  data/.style={block, fill=green!12},
+  model/.style={block, fill=orange!18},
+  rules/.style={block, fill=yellow!25},
+  support/.style={block, fill=purple!12},
+  output/.style={block, fill=gray!15},
+  flow/.style={->, thick},
+  feedback/.style={->, thick, dashed}
+]
+
+% User-facing input
+\node[user] (renter) {Renter\\
+Budget, location, space, bedrooms, required amenities};
+
+\node[user, right=of renter] (interface) {Web interface\\
+Enter or select a listing and preferences};
+
+% Data and model path
+\node[data, below=of interface] (dataset) {Rental listings\\
+UCI Apartment for Rent Classified};
+
+\node[data, right=of dataset] (preprocess) {Data management\\
+Validate, clean, and prepare listing attributes};
+
+\node[model, right=of preprocess] (estimate) {Comparable search and\\rent estimation\\
+Reference rent range and similar listings};
+
+% User preference/rule path
+\node[rules, below=of estimate] (rules) {Preference rules\\
+Check budget, location, space, bedrooms, and amenities};
+
+% Integration and output
+\node[support, right=2cm of estimate] (integration) {Decision support\\
+Combine price evidence, preference checks, and uncertainty};
+
+\node[output, right=of integration] (result) {Recommendation and explanation\\
+Shortlist, review, or skip};
+
+% Optional admin
+\node[user, above=of dataset] (admin) {Administrator / data maintainer\\
+Update data, preprocessing, model, and rules};
+
+% Information flows
+\draw[flow] (renter) -- (interface);
+\draw[flow] (interface) -- node[above, align=center] {Listing details} (estimate);
+\draw[flow] (interface) |- node[pos=0.25, right, align=left] {Preferences} (rules);
+
+\draw[flow] (dataset) -- (preprocess);
+\draw[flow] (preprocess) -- (estimate);
+\draw[flow] (estimate) -- node[above, align=center] {Estimated rent and\\comparable listings} (integration);
+\draw[flow] (rules) -| node[pos=0.25, below, align=center] {Fit and constraint results} (integration);
+\draw[flow] (integration) -- (result);
+\draw[feedback] (result) |- node[pos=0.25, right, align=left] {Results shown to renter} (interface);
+
+\draw[feedback] (admin) -- (dataset);
+\draw[feedback] (admin) -- (preprocess);
+\draw[feedback] (admin) to[bend left=18] (estimate);
+\draw[feedback] (admin) to[bend right=18] (rules);
+
+\end{tikzpicture}%
+}
+\caption{Functional architecture of the rental-home decision-support prototype.}
+\label{fig:idss-architecture}
+\end{figure}
+
+\section{Modules and Information Flow}
+
+The prototype consists of the following modules:
+
+\begin{enumerate}
+  \item \textbf{User interface:} collects listing details and the renter's
+  budget and housing preferences, then displays estimates, checks, and
+  explanations.
+
+  \item \textbf{Data management and preprocessing:} loads rental records,
+  validates relevant fields, standardises units and categories, and
+  prepares location and listing attributes for comparison and modelling.
+
+  \item \textbf{Comparable-listing and rent-estimation module:} identifies
+  similar records using available characteristics such as location, size,
+  bedrooms, and bathrooms, then estimates a reference asking rent. It
+  also reports how many comparable records support the estimate.
+
+  \item \textbf{Preference and rule-evaluation module:} compares the
+  listing with the user's budget and requirements, identifying met,
+  unmet, or unknown criteria.
+
+  \item \textbf{Decision-support and explanation module:} combines the
+  price evidence, preference checks, and data-coverage information into
+  one of three outcomes: \emph{shortlist}, \emph{review}, or \emph{skip}.
+  It provides the main reasons for that outcome.
+
+  \item \textbf{Outcome-recording module (if implemented):} stores
+  user-entered viewing or offer outcomes for evaluation. These outcomes
+  are not treated as predictions of future landlord responses.
+\end{enumerate}
+
+Information flows from the user's inputs and the listing data to the
+preprocessing and analysis modules. The rent-estimation and rule-evaluation
+modules produce separate results. The decision-support module combines
+them, then sends the recommendation and its explanation to the interface.
+The renter makes the final decision.
+
+\section{Software Tools and Technologies}
+
+The prototype is implemented in Python. Python is used to load and
+preprocess the rental listings, train and run the rent-estimation model,
+and apply the explicit decision rules. A web interface allows renters
+to enter preferences and listing details and inspect recommendations.
+The implementation should name the specific Python libraries, model
+algorithm, storage method, and web framework used by the team.
+
+% ============================================================
+% 4. DATA PREPROCESSING
+% ============================================================
+\chapter{Data Pre-processing Summary}
+\label{ch:preprocessing}
+
+\section{Data Sources}
+[Describe each raw dataset or database: source, URL or access details, variables, number of records, time period, and license if relevant.]
+
+\section{Data Understanding and Quality Assessment}
+[Describe the exploratory analysis and quality issues found, such as missing values, duplicates, outliers, inconsistent formats, class imbalance, or noisy records.]
+
+\section{Pre-processing Pipeline}
+[Explain the operations applied, why they were needed, and the order in which they were performed.]
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=0.65cm and 0.55cm]
+  \node[process] (raw) {Raw data};
+  \node[process,right=of raw] (clean) {Cleaning};
+  \node[process,right=of clean] (transform) {Transformation\\and encoding};
+  \node[process,right=of transform] (split) {Train / test\\split};
+  \node[process,right=of split] (ready) {Prepared data};
+  \draw[arrow] (raw)--(clean);
+  \draw[arrow] (clean)--(transform);
+  \draw[arrow] (transform)--(split);
+  \draw[arrow] (split)--(ready);
+\end{tikzpicture}
+\caption{Example data pre-processing pipeline. Adapt it to the actual workflow.}
+\label{fig:preprocessing}
+\end{figure}
+
+\section{Final Dataset}
+[Report the final dataset dimensions, selected features, target variable (if any), and any relevant changes after preprocessing.]
+
+\begin{table}[H]
+\centering
+\caption{Summary of datasets before and after preprocessing.}
+\label{tab:datasets}
+\begin{tabularx}{\textwidth}{p{3cm} p{2cm} p{2cm} X}
+\toprule
+\textbf{Dataset} & \textbf{Records} & \textbf{Features} & \textbf{Notes}\\
+\midrule
+Raw & [N] & [N] & [Source / issues]\\
+Preprocessed & [N] & [N] & [Cleaning / transformations]\\
+Training & [N] & [N] & [Split details]\\
+Testing & [N] & [N] & [Split details]\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ============================================================
+% 5. DATA-DRIVEN MODELS
+% ============================================================
+\chapter{Data-driven IDSS Models}
+\label{ch:datadriven}
+
+\section{Modelling Objectives}
+[Explain which decision-support tasks are addressed by data-driven modelling and why the selected approaches are appropriate.]
+
+\section{Model 1: [Model name]}
+\subsection{Method and Rationale}
+[Describe the algorithm, its role in the IDSS, and why it was selected.]
+\subsection{Inputs, Outputs, and Configuration}
+[Specify features, target, important hyperparameters, and output format.]
+\subsection{Training Procedure}
+[Describe the training process, validation strategy, and software used.]
+\subsection{Results}
+[Present relevant results using tables or figures. Explain what the results mean for the decisions supported.]
+
+\begin{table}[H]
+\centering
+\caption{Example model evaluation results. Replace metrics with those appropriate to your task.}
+\label{tab:modelresults}
+\begin{tabular}{lc}
+\toprule
+\textbf{Metric} & \textbf{Value}\\
+\midrule
+{[Metric 1]} & [Value]\\
+{[Metric 2]} & [Value]\\
+{[Metric 3]} & [Value]\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Additional Models (if applicable)}
+[Repeat the previous model structure for each additional model. Include descriptive, discriminant, predictive, or associative models as appropriate.]
+
+\section{Model Output and Integration}
+[Explain how trained models are represented and used at system runtime. For example, describe how a trained decision tree is converted into machine-readable rules and evaluated on new cases.]
+
+% ============================================================
+% 6. POSTPROCESSING AND VALIDATION
+% ============================================================
+\chapter{Data Post-processing and Model Validation}
+\label{ch:validation}
+
+\section{Post-processing}
+[Describe how model outputs are transformed into useful information for users, including ranking, thresholds, aggregation, formatting, or explanation.]
+
+\section{Validation Strategy}
+[Describe the validation design, test data, baselines, metrics, and safeguards against data leakage.]
+
+\section{Validation Results}
+[Present the validation results and interpret them in relation to the intended decisions.]
+
+\section{Limitations and Reliability}
+[Discuss uncertainty, bias, generalizability, data limitations, and cases where recommendations should be reviewed by a human.]
+
+% ============================================================
+% 7. MODEL-DRIVEN TECHNIQUES
+% ============================================================
+\chapter{Model-driven IDSS Techniques}
+\label{ch:modeldriven}
+
+\section{Knowledge-based Component}
+[Describe the expert knowledge, rules, ontology, constraints, or other knowledge representation used. Identify its source and how it was elicited or constructed.]
+
+\section{Reasoning Mechanism}
+[Explain how the system applies the knowledge: rule-based inference, case-based reasoning, qualitative reasoning, simulation, or another technique.]
+
+\section{Example Rules or Knowledge Structures}
+\begin{table}[H]
+\centering
+\caption{Example knowledge rules. Replace with rules actually used in the prototype.}
+\label{tab:rules}
+\begin{tabularx}{\textwidth}{p{1cm} X X}
+\toprule
+\textbf{ID} & \textbf{Condition (IF)} & \textbf{Conclusion / action (THEN)}\\
+\midrule
+R1 & [Condition] & [Conclusion]\\
+R2 & [Condition] & [Conclusion]\\
+R3 & [Condition] & [Conclusion]\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Interaction with Data-driven Models}
+[Explain how the knowledge-based and data-driven components complement one another and contribute to the final decision support.]
+
+% ============================================================
+% 8. USE CASES
+% ============================================================
+\chapter{Testing Use Cases}
+\label{ch:usecases}
+
+[Describe at least three use cases that demonstrate how the IDSS supports different decision-making processes. Use realistic inputs and report the system outputs.]
+
+\section{Use Case 1: [Name]}
+\textbf{Goal:} [What decision is being supported?]\\
+\textbf{Actor:} [Who uses the system?]\\
+\textbf{Initial conditions:} [Relevant context.]\\
+\textbf{Input data:} [Values or scenario.]\\
+\textbf{Steps:}
+\begin{enumerate}
+  \item [Step 1]
+  \item [Step 2]
+  \item [Step 3]
+\end{enumerate}
+\textbf{Expected output:} [Expected recommendation or result.]\\
+\textbf{Actual output:} [Observed system result.]\\
+\textbf{Assessment:} [Did the system behave as expected? Explain.]
+
+\section{Use Case 2: [Name]}
+\textbf{Goal:} [Goal.]\\
+\textbf{Actor:} [Actor.]\\
+\textbf{Input data:} [Scenario and inputs.]\\
+\textbf{Steps:}
+\begin{enumerate}
+  \item [Step 1]
+  \item [Step 2]
+  \item [Step 3]
+\end{enumerate}
+\textbf{Expected output:} [Expected result.]\\
+\textbf{Actual output:} [Observed result.]\\
+\textbf{Assessment:} [Evaluation.]
+
+\section{Use Case 3: [Name]}
+\textbf{Goal:} [Goal.]\\
+\textbf{Actor:} [Actor.]\\
+\textbf{Input data:} [Scenario and inputs.]\\
+\textbf{Steps:}
+\begin{enumerate}
+  \item [Step 1]
+  \item [Step 2]
+  \item [Step 3]
+\end{enumerate}
+\textbf{Expected output:} [Expected result.]\\
+\textbf{Actual output:} [Observed result.]\\
+\textbf{Assessment:} [Evaluation.]
+
+\section{Use Case Comparison}
+\begin{table}[H]
+\centering
+\caption{Summary of the use cases tested.}
+\label{tab:usecases}
+\begin{tabularx}{\textwidth}{p{1.5cm} p{2.5cm} X X}
+\toprule
+\textbf{Use case} & \textbf{Decision} & \textbf{Main input} & \textbf{Outcome}\\
+\midrule
+UC1 & [Decision] & [Input] & [Outcome]\\
+UC2 & [Decision] & [Input] & [Outcome]\\
+UC3 & [Decision] & [Input] & [Outcome]\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ============================================================
+% 9. GLOBAL EVALUATION
+% ============================================================
+\chapter{Global Evaluation of the IDSS and Conclusions}
+\label{ch:evaluation}
+
+\section{System Performance}
+[Evaluate the prototype in the designed scenarios. Discuss functional correctness, response time, usability, quality of recommendations, and other relevant performance dimensions.]
+
+\section{Achievement of Objectives}
+[Review the objectives from \cref{ch:domain} and state which were achieved, partially achieved, or not achieved. Support the assessment with evidence.]
+
+\section{Strengths and Limitations}
+[Summarize the main strengths and current limitations of the complete IDSS.]
+
+\section{Conclusions}
+[Present the main conclusions from the development and evaluation of the prototype.]
+
+% ============================================================
+% 10. FUTURE WORK
+% ============================================================
+\chapter{Future Work and Improvements}
+\label{ch:future}
+
+[Describe realistic next steps. Consider data quality and quantity, additional models, knowledge acquisition, explainability, user experience, security, deployment, and evaluation with real users where relevant.]
+
+\begin{itemize}[leftmargin=*]
+  \item [Improvement 1 and its expected benefit.]
+  \item [Improvement 2 and its expected benefit.]
+  \item [Improvement 3 and its expected benefit.]
+\end{itemize}
+
+% ============================================================
+% 11. PROJECT PLANNING / GANTT
+% ============================================================
+\chapter{Project Planning: Gantt Diagram}
+\label{ch:gantt}
+
+[Explain the project phases, milestones, dependencies, and how the work was planned. Adapt the dates and tasks below.]
+
+\begin{figure}[H]
+\centering
+\begin{ganttchart}[
+  hgrid,
+  vgrid,
+  x unit=0.85cm,
+  y unit chart=0.65cm,
+  title height=1,
+  bar height=0.55,
+  group height=0.6,
+  title label font=\small,
+  bar label font=\small,
+  group label font=\small\bfseries
+]{1}{10}
+  \gantttitle{Project timeline (replace periods with actual dates)}{10}\\
+  \gantttitlelist{1,...,10}{1}\\
+  \ganttgroup{Planning and analysis}{1}{2}\\
+  \ganttbar{Domain and decision definition}{1}{2}\\
+  \ganttbar{Data collection}{2}{3}\\
+  \ganttgroup{Design and development}{3}{7}\\
+  \ganttbar{Architecture and preprocessing}{3}{4}\\
+  \ganttbar{Model development}{4}{6}\\
+  \ganttbar{Interface and integration}{6}{7}\\
+  \ganttgroup{Evaluation and delivery}{8}{10}\\
+  \ganttbar{Testing and use cases}{8}{9}\\
+  \ganttbar{Report and presentation}{8}{10}\\
+  \ganttbar{Demo and final delivery}{10}{10}
+\end{ganttchart}
+\caption{Illustrative Gantt diagram. Update the timeline to reflect the team's actual plan and execution.}
+\label{fig:gantt}
+\end{figure}
+
+% ============================================================
+% 12. TEAM ASSIGNMENT AND RESPONSIBILITIES
+% ============================================================
+\chapter{Tasks Assignment and Team Responsibilities}
+\label{ch:teamwork}
+
+[Describe how responsibilities were distributed, how the team coordinated work, and how integration and review were handled.]
+
+\begin{longtable}{p{3.2cm} p{2.5cm} p{7cm}}
+\caption{Task assignment and responsibilities.}\label{tab:responsibilities}\\
+\toprule
+\textbf{Team member} & \textbf{Role} & \textbf{Assigned tasks and responsibilities}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Team member} & \textbf{Role} & \textbf{Assigned tasks and responsibilities}\\
+\midrule
+\endhead
+{[Member 1]} & [Role] & [Tasks]\\
+{[Member 2]} & [Role] & [Tasks]\\
+{[Member 3]} & [Role] & [Tasks]\\
+{[Member 4]} & [Role] & [Tasks]\\
+{[Member 5, if applicable]} & [Role] & [Tasks]\\
+\bottomrule
+\end{longtable}
+
+% ============================================================
+% 13. TIME SHEET
+% ============================================================
+\chapter{Team Time Sheet}
+\label{ch:timesheet}
+
+[Record the hours devoted by each team member to each task. Ensure the totals are consistent with the team's accounting.]
+
+\begin{longtable}{p{4.0cm} *{5}{>{\centering\arraybackslash}p{1.35cm}}}
+\caption{Hours devoted by each team member to each task. Adapt the number of member columns to your team.}\label{tab:timesheet}\\
+\toprule
+\textbf{Task} & \textbf{M1} & \textbf{M2} & \textbf{M3} & \textbf{M4} & \textbf{M5}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Task} & \textbf{M1} & \textbf{M2} & \textbf{M3} & \textbf{M4} & \textbf{M5}\\
+\midrule
+\endhead
+Domain analysis & [h] & [h] & [h] & [h] & [h]\\
+Data collection & [h] & [h] & [h] & [h] & [h]\\
+Preprocessing & [h] & [h] & [h] & [h] & [h]\\
+Model development & [h] & [h] & [h] & [h] & [h]\\
+Knowledge component & [h] & [h] & [h] & [h] & [h]\\
+Interface and integration & [h] & [h] & [h] & [h] & [h]\\
+Testing and evaluation & [h] & [h] & [h] & [h] & [h]\\
+Documentation and demo & [h] & [h] & [h] & [h] & [h]\\
+\midrule
+\textbf{Total hours} & [h] & [h] & [h] & [h] & [h]\\
+\bottomrule
+\end{longtable}
+
+\section{Global Accounting per Team Member}
+\begin{table}[H]
+\centering
+\caption{Total hours per team member.}
+\label{tab:hours}
+\begin{tabular}{lc}
+\toprule
+\textbf{Team member} & \textbf{Total hours}\\
+\midrule
+{[Member 1]} & [Hours]\\
+{[Member 2]} & [Hours]\\
+{[Member 3]} & [Hours]\\
+{[Member 4]} & [Hours]\\
+{[Member 5, if applicable]} & [Hours]\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================================
+% REFERENCES
+% ============================================================
+\begin{thebibliography}{99}
+\addcontentsline{toc}{chapter}{References}
+
+\bibitem{uci_apartment_dataset}
+UCI Machine Learning Repository.
+\textit{Apartment for Rent Classified}. 2019.
+doi: \href{https://doi.org/10.24432/C5X623}{10.24432/C5X623}.
+Available at:
+\url{https://archive.ics.uci.edu/dataset/555/apartment}.
+
+\end{thebibliography}
+
+% ============================================================
+% APPENDICES
+% ============================================================
+\appendix
+\chapter{Additional Figures and Tables}
+[Add supplementary plots, detailed metrics, screenshots, or tables that support the report but are not essential to the main narrative.]
+
+\chapter{Implementation Details}
+[Add technical details, selected code excerpts, configuration information, or links to the project repository. Do not include large source files in the report; deliver source code in the required Source folder.]
+
+\chapter{README and Deliverable Structure}
+[Briefly describe the contents of the final ZIP package and how to run the prototype/demo.]
 
 \end{document}
