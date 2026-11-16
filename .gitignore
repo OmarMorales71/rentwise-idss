@@ -255,3 +255,9 @@ Thumbs.db
 # Raw dataset extracted from dataset/raw/apartment.zip (102 MB, over the GitHub file limit)
 dataset/raw/*.csv
 dataset/raw/*.7z
+
+# Local environment
+.venv/
+# Generated / downloaded locally, rebuilt by scripts/clean_dataset.py
+dataset/raw/*.zip
+dataset/processed/*.csv

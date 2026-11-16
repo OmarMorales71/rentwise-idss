@@ -45,16 +45,16 @@ The raw file is `;`-separated and encoded in `cp1252`. Titles and descriptions c
 | | Rows | Columns | Size |
 |---|---|---|---|
 | Raw | 100,000 | 22 | 102 MB |
-| Clean | 87,662 | 47 | 20 MB |
+| Clean | 87,452 | 45 | 19 MB |
 
-Coverage: 3,547 cities in 51 state codes, listed between 2018-12-07 and 2019-12-26.
+Coverage: 3,541 cities in 51 state codes, listed between 2018-12-07 and 2019-12-26.
 
 Main numeric columns:
 
 | Column | Min | 25% | Median | Mean | 75% | Max |
 |---|---|---|---|---|---|---|
-| `price` (USD per month) | 300 | 1,035 | 1,378 | 1,546 | 1,830 | 10,000 |
-| `square_feet` | 150 | 730 | 902 | 960 | 1,123 | 4,970 |
+| `price` (USD per month) | 300 | 1,035 | 1,379 | 1,547 | 1,830 | 10,000 |
+| `square_feet` | 150 | 730 | 903 | 961 | 1,124 | 4,970 |
 | `price_per_sqft` | 0.32 | 1.14 | 1.49 | 1.71 | 2.04 | 9.99 |
 | `bedrooms` | 0 | 1 | 2 | 1.73 | 2 | 9 |
 | `bathrooms` | 1 | 1 | 1 | 1.45 | 2 | 7 |
@@ -63,34 +63,34 @@ Listings and median rent by number of bedrooms:
 
 | Bedrooms | Listings | Median rent |
 |---|---|---|
-| 0 (studio) | 613 | $1,250 |
-| 1 | 35,710 | $1,232 |
-| 2 | 39,949 | $1,440 |
-| 3 | 9,642 | $1,560 |
+| 0 (studio) | 603 | $1,250 |
+| 1 | 35,570 | $1,232 |
+| 2 | 39,910 | $1,440 |
+| 3 | 9,622 | $1,560 |
 | 4 | 1,448 | $1,850 |
-| 5 or more | 300 | $2,632 |
+| 5 or more | 299 | $2,625 |
 
 States with the most listings:
 
 | State | Listings | Median rent | Median price per sq ft |
 |---|---|---|---|
-| TX | 9,808 | $1,160 | $1.35 |
-| CA | 9,672 | $2,200 | $2.60 |
-| VA | 7,230 | $1,454 | $1.58 |
-| NC | 5,778 | $1,110 | $1.14 |
-| CO | 5,356 | $1,490 | $1.73 |
-| FL | 5,161 | $1,386 | $1.40 |
-| MA | 4,848 | $2,100 | $2.12 |
-| MD | 4,468 | $1,600 | $1.70 |
-| GA | 4,389 | $1,299 | $1.25 |
-| NJ | 4,142 | $1,935 | $2.13 |
+| TX | 9,788 | $1,160 | $1.35 |
+| CA | 9,622 | $2,200 | $2.59 |
+| VA | 7,226 | $1,454 | $1.58 |
+| NC | 5,777 | $1,110 | $1.14 |
+| CO | 5,347 | $1,490 | $1.73 |
+| FL | 5,156 | $1,386 | $1.40 |
+| MA | 4,844 | $2,100 | $2.12 |
+| MD | 4,428 | $1,600 | $1.70 |
+| GA | 4,387 | $1,299 | $1.25 |
+| NJ | 4,139 | $1,935 | $2.13 |
 
 Preference columns:
 
 - Amenities: 83% of the listings give an amenity list. The most common are pool (43%), parking (43%), gym (37%), patio or deck (27%) and washer and dryer (26%).
 - Pets: 45% of the listings state a pet policy. Among those, 87% allow cats and 83% allow dogs.
 
-Example rows (a subset of the 47 columns):
+Example rows (a subset of the 45 columns):
 
 | id | price | square_feet | price_per_sqft | bedrooms | bathrooms | cityname | state | cats_allowed | amenities_listed | amenity_pool | listed_at |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -114,20 +114,19 @@ The full list of columns is in the [Columns](#columns) section.
 
 ## How the data was cleaned
 
-The steps run in this order. Raw rows are never edited in place; a row is either kept, removed, or completed with a flagged imputed value.
+The steps run in this order. Raw rows are never edited in place; a row is either kept or removed.
 
 | # | Step | Rows removed |
 |---|---|---|
 | 1 | Remove exact duplicate rows | 84 |
-| 2 | Remove short-term rentals | 4 |
+| 2 | Remove listings that are not apartments (retail, home, condo, short-term, other) | 61 |
 | 3 | Remove prices not quoted per month | 4 |
-| 4 | Remove rows without a price | 1 |
-| 5 | Remove rows without a usable location | 302 |
-| 6 | Remove implausible prices | 80 |
-| 7 | Remove implausible sizes | 32 |
-| 8 | Remove implausible prices per square foot | 20 |
-| 9 | Remove reposts of the same listing | 11,811 |
-| 10 | Impute missing bedrooms and bathrooms | 0 |
+| 4 | Remove rows without price, size, bedrooms or bathrooms | 185 |
+| 5 | Remove rows without a usable location | 298 |
+| 6 | Remove implausible prices | 79 |
+| 7 | Remove implausible sizes | 23 |
+| 8 | Remove implausible prices per square foot | 18 |
+| 9 | Remove reposts of the same listing | 11,796 |
 
 ### Missing values
 
@@ -138,19 +137,19 @@ In the raw file a missing value is the literal text `null`. The script turns `nu
 | `price` | 1 | Row removed | It is the value the system estimates; it cannot be guessed. |
 | `cityname`, `state` | 302 | Row removed | Comparable listings are searched by location. |
 | `latitude`, `longitude` | 25 | Row removed | Same reason. All 25 rows also lack city and state. |
-| `bedrooms` | 124 | Imputed, flagged in `bedrooms_imputed` | Median bedrooms of listings in the same square-footage decile. |
-| `bathrooms` | 63 | Imputed, flagged in `bathrooms_imputed` | Median bathrooms of listings with the same number of bedrooms. |
+| `bedrooms` | 124 | Row removed | Bedrooms are a core comparison criterion and a common user requirement; guessing them could match the wrong comparable listings. |
+| `bathrooms` | 63 | Row removed | Same reason. |
 | `amenities` | 16,091 | Kept; all `amenity_*` columns set to 0 and `amenities_listed` set to false | The ad does not say whether the amenity exists. `amenities_listed` separates "no list given" from "list given without this amenity". |
 | `pets_allowed` | 55,663 | Kept; `cats_allowed` and `dogs_allowed` left empty | Unknown is not the same as "no pets". The raw value `None` means no pets and becomes false. |
 | `address` | 92,057 | Column dropped | Missing in 92% of the rows. |
 
-Bedrooms and bathrooms are imputed instead of removed because few rows are affected (113 and 45 in the clean file) and the other fields of those rows are valid. Any analysis that needs observed values only can filter on the two flag columns.
+Removing these rows costs less than 0.2% of the data, and every remaining bedroom and bathroom value is observed rather than estimated.
 
 ### Incorrect and implausible values
 
 | Problem | Example in the raw data | Handling |
 |---|---|---|
-| Placeholder coordinates | 220 rows share latitude 39.8163 and longitude -98.5576, the geographic centre of the contiguous US, and have no city or state | Row removed (part of the 302 location rows) |
+| Placeholder coordinates | 220 rows share latitude 39.8163 and longitude -98.5576, the geographic centre of the contiguous US, and have no city or state | Row removed (part of the location rows) |
 | Price not monthly | 3 `Weekly` and 1 `Monthly\|Weekly` | Row removed; a weekly price cannot be compared with monthly rents |
 | Price outside $300 to $10,000 per month | $100 for a 2-bedroom in Hartford; $52,500 for a studio in Barstow | Row removed |
 | Size outside 150 to 5,000 sq ft | 101 sq ft studio; 40,000 sq ft 1-bedroom in New York | Row removed |
@@ -165,7 +164,7 @@ Values that look unusual but are possible are kept, for example apartments with 
 ### Duplicates and reposts
 
 - 84 rows are exact copies of another row, with the same `id`. One copy is kept.
-- 11,811 rows are reposts: the same source advertises the same unit several times, minutes apart, with a different marketing title each time. Two rows are treated as the same listing when they agree on price, square feet, bedrooms, bathrooms, city, state, coordinates, amenities and source. The earliest ad is kept.
+- 11,796 rows are reposts: the same source advertises the same unit several times, minutes apart, with a different marketing title each time. Two rows are treated as the same listing when they agree on price, square feet, bedrooms, bathrooms, city, state, coordinates, amenities and source. The earliest ad is kept.
 
 Reposts are removed because they would fill the list of comparable listings with copies of one ad and would leak between training and test data. The rule can also merge distinct units that share a floor plan and a price; these add no information about rent levels. Run the script with `--keep-reposts` to skip this step.
 
@@ -175,7 +174,7 @@ Dropped from the clean file:
 
 | Raw column | Reason |
 |---|---|
-| `category` | Constant after removing short-term rentals. The 42 rows tagged `commercial/retail` are apartments in mixed-use buildings and are kept. |
+| `category` | Constant after keeping only `housing/rent/apartment`. The other categories (retail, home, condo, short-term, other; 61 rows) are a different product from the apartments the system compares. |
 | `body` | Long free text, not used by the models. |
 | `currency` | Always `USD`. |
 | `price_display` | Formatted copy of `price`. |
@@ -194,7 +193,6 @@ Clean file:
 | `price_per_sqft` | decimal | `price / square_feet` |
 | `bedrooms` | integer | 0 means studio |
 | `bathrooms` | decimal | Half bathrooms count as 0.5 |
-| `bedrooms_imputed`, `bathrooms_imputed` | boolean | True when the value was missing in the raw file |
 | `cityname`, `state` | text | City and 2-letter state code |
 | `latitude`, `longitude` | decimal | See the limitation below |
 | `cats_allowed`, `dogs_allowed` | boolean or empty | Empty when the ad gives no pet policy (55% of the rows) |
@@ -208,7 +206,7 @@ Clean file:
 ## Known limitations of the clean data
 
 - Coordinates are coarse. Half of the cities have a single latitude and longitude for all their listings, so distance between listings mostly measures distance between cities, not between neighbourhoods.
-- Coverage per city is uneven. Half of the 3,547 cities have 3 listings or fewer; the largest has 2,408.
+- Coverage per city is uneven. Half of the 3,541 cities have 3 listings or fewer; the largest has 2,408.
 - Listings are concentrated in four collection periods: December 2018, February 2019, September 2019 and December 2019.
 - One source, RentDigs.com, provides 91% of the raw rows.
 - Prices are asking rents from 2018 and 2019, not current or agreed rents.

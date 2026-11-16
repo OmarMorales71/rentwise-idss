@@ -52,7 +52,7 @@ REPOST_KEY = [
 ]
 # Raw columns that are not carried over to the clean file.
 DROPPED_COLUMNS = {
-    "category": "constant after filtering out short-term rentals",
+    "category": "constant after keeping apartments only",
     "body": "long free text, not used by the models",
     "amenities": "replaced by amenities_listed and one amenity_* column per amenity",
     "currency": "constant (always USD)",
@@ -139,12 +139,13 @@ def clean(raw: pd.DataFrame, keep_reposts: bool = False) -> tuple[pd.DataFrame, 
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
     # 3. Out-of-scope listings.
-    keep(df["category"] != "housing/rent/short_term", "Short-term rentals")
+    keep(df["category"] == "housing/rent/apartment", "Not an apartment (retail, home, condo, short-term, other)")
     keep(df["price_type"] == "Monthly", "Price not quoted per month")
     keep(df["currency"] == "USD", "Currency other than USD")
 
     # 4. Rows without the fields the system cannot work without.
-    keep(df["price"].notna() & df["square_feet"].notna(), "Missing price or square feet")
+    keep(df[["price", "square_feet", "bedrooms", "bathrooms"]].notna().all(axis=1),
+         "Missing price, square feet, bedrooms or bathrooms")
     placeholder = (df["latitude"] == PLACEHOLDER_COORDS[0]) & (df["longitude"] == PLACEHOLDER_COORDS[1])
     has_location = df[["cityname", "state", "latitude", "longitude"]].notna().all(axis=1)
     keep(has_location & ~placeholder, "Missing or placeholder location")
@@ -169,14 +170,8 @@ def clean(raw: pd.DataFrame, keep_reposts: bool = False) -> tuple[pd.DataFrame, 
         df = df.sort_values("time", kind="stable")  # keep the earliest ad
         keep(~df.duplicated(REPOST_KEY), "Reposts of the same listing")
 
-    # 8. Impute the few missing bedroom / bathroom counts and flag them.
-    df["bedrooms_imputed"] = df["bedrooms"].isna()
-    size_band = pd.qcut(df["square_feet"], 10, duplicates="drop")
-    df["bedrooms"] = df["bedrooms"].fillna(df.groupby(size_band, observed=True)["bedrooms"].transform("median"))
-    df["bathrooms_imputed"] = df["bathrooms"].isna()
-    df["bathrooms"] = df["bathrooms"].fillna(df.groupby("bedrooms")["bathrooms"].transform("median"))
-    df["bathrooms"] = df["bathrooms"].fillna(df["bathrooms"].median())
-    df["bedrooms"] = df["bedrooms"].round().astype(int)
+    # 8. Integer bedroom counts (missing rows were removed in step 4).
+    df["bedrooms"] = df["bedrooms"].astype(int)
 
     # 9. Derived columns.
     df["price"] = df["price"].astype(int)
@@ -199,7 +194,7 @@ def clean(raw: pd.DataFrame, keep_reposts: bool = False) -> tuple[pd.DataFrame, 
 
     columns = [
         "id", "title", "price", "square_feet", "price_per_sqft",
-        "bedrooms", "bathrooms", "bedrooms_imputed", "bathrooms_imputed",
+        "bedrooms", "bathrooms",
         "cityname", "state", "latitude", "longitude",
         "cats_allowed", "dogs_allowed", "amenities_listed", *sorted(dummies.columns),
         "has_photo", "fee", "source", "listed_at",
