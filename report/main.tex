@@ -273,12 +273,13 @@ D3 & [Decision 3] & [Actor] & [Information and output]\\
 
 \section{System Actors and User Roles}
 
-The prototype supports people comparing rental listings against their
-budget and housing requirements. It provides decision support by combining
-an estimated market rent with checks against the user's stated preferences.
-The system presents a recommendation and its reasons; the user remains
-responsible for deciding whether to contact the advertiser, arrange a
-viewing, or submit an application.
+RentWise is designed as an interactive decision-support tool for a renter
+assessing an apartment listing. The system analyses the evidence and
+explains its recommendation, while the renter retains responsibility for
+the decision to contact the advertiser, arrange a viewing, or apply. The
+repository currently contains the data-cleaning pipeline; the modelling
+and user-interface components below describe the proposed prototype
+architecture and should be updated as those components are implemented.
 
 \begin{table}[htbp]
 \centering
@@ -289,138 +290,149 @@ viewing, or submit an application.
 \textbf{Actor} & \textbf{Responsibilities} & \textbf{System functionalities} \\
 \midrule
 Renter / decision-maker &
-Defines the maximum monthly budget, preferred location, minimum
-floor area, bedroom requirements, and required amenities. Reviews
-the evidence and makes the final housing decision. &
-Enters or selects a listing; sets and edits preferences; views the
-estimated rent range, comparable listings, requirement checks, and
-recommendation; records viewing or offer outcomes when available. \\
+Provides the listing under assessment and specifies a budget, location
+preferences, minimum size or bedroom requirements, mandatory amenities,
+and optional preferences. Reviews the evidence and makes the final
+housing decision. &
+Enters listing details and preferences; views comparable listings, the
+reference asking-rent estimate, mandatory-requirement checks, optional
+preference score, uncertainty information, and the shortlist, review, or
+skip recommendation with its explanation. \\
 \addlinespace
-System administrator / data maintainer &
-Maintains the application, prepares or imports listing data, and
-monitors data quality and model behaviour. &
-Loads and validates the dataset; runs the preprocessing and model
-pipeline; updates the model and decision rules; checks errors and
-coverage; maintains the web application. \\
+Project / data maintainer &
+Prepares the historical listing data and maintains the prototype's
+preprocessing, candidate models, and decision rules. This is a development
+and maintenance role, not a separate rental-market decision-maker. &
+Runs the cleaning pipeline; checks data coverage and quality; evaluates
+candidate methods; and updates the application as the design is validated. \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 \section{General Architecture}
 
-The prototype follows a user-centred decision-support architecture. Its
-data component stores rental listings and prepares the fields needed for
-analysis. The data-driven component estimates a reference rent for a
-listing from comparable observations. The knowledge-based component
-applies explicit rules to compare the listing with the user's budget and
-must-have requirements. A decision-support component combines these
-outputs into a recommendation, while the interface presents the result
-and its supporting evidence.
+The architecture instantiates the course's cognitive-oriented IDSS
+process through three successive stages: \emph{analysis},
+\emph{synthesis}, and \emph{prognosis}. The user interface collects the
+case to assess and the renter's preferences. A data-management component
+prepares historical listings for the data-driven models. A knowledge
+component holds the mandatory constraints and the rules for interpreting
+missing or weak evidence. The inference and decision-support components
+combine these inputs and return an explained recommendation to the renter.
 
 The initial data source is the UCI \emph{Apartment for Rent Classified}
 dataset. It includes listing attributes such as price, square footage,
 bedrooms, bathrooms, amenities, city, state, coordinates, and listing
-time. The repository describes the listings as being in the United
-States; consequently, estimates from this dataset are interpreted in
-the market and currency represented by its records. They should not be
-presented as validated estimates for another country or currency
-\cite{uci_apartment_dataset}.
+time. The repository identifies its geographic scope as the United States
+and its records as historical listings from 2019. Therefore, outputs are
+reference estimates based on historical US asking rents in USD; they are
+not evidence of current rents, final transaction prices, or another
+country's market \cite{uci_apartment_dataset}.
 
-The data-driven component uses listing characteristics and location to
-estimate a reference asking rent. The prototype should show a range and
-nearby or otherwise similar listings when the available comparable data
-supports doing so. If there are too few comparable records, or important
-listing details are unavailable, the system marks the estimate as
-uncertain and directs the user to review the listing.
+\paragraph{Analysis.} The data-management component validates and prepares
+the listing attributes used for comparison. The repository's cleaning
+script produces a processed dataset while preserving the original raw
+file. The proposed analysis uses K-nearest neighbours to retrieve similar
+listings and investigates regression models as a source of a reference
+asking-rent estimate. In parallel, rule-based checks identify whether
+mandatory requirements, such as maximum budget or minimum bedrooms, are
+met. KNN, regression, the weighted-sum model, and Streamlit are recorded
+in the repository as proposed methods and tools; their final selection
+and performance must be reported after evaluation.
 
-The knowledge-based component evaluates user-defined constraints. It
-checks whether the rent is within budget and whether the listing meets
-minimum space, bedroom, location, and required-amenity preferences.
-These checks are kept distinct from the rent estimate so the user can
-see how each part affects the recommendation.
+\paragraph{Synthesis.} The decision-support component combines the
+mandatory-rule results with the renter's optional preferences. The
+proposed Weighted Sum Model can rank or score options on optional
+criteria, while mandatory constraints remain explicit. The component
+forms the shortlist, review, and skip alternatives and attaches the
+reasons and evidence for each result.
+
+\paragraph{Prognosis.} For each alternative, the system assesses the
+decision-relevant consequences supported by the available evidence:
+asking-rent position relative to comparable listings, budget fit,
+preference fit, and uncertainty due to sparse comparisons or missing
+details. This is a prognosis of the listing assessment, not a prediction
+of landlord responses, application success, or the final negotiated rent.
+The recommendation and explanation are returned through the interface;
+the renter accepts, refines, or rejects the advice.
 
 \begin{figure}[htbp]
 \centering
 \resizebox{\textwidth}{!}{%
 \begin{tikzpicture}[
   >=Stealth,
-  node distance=1.5cm and 1.7cm,
+  node distance=1.1cm and 1.15cm,
   block/.style={
     draw,
     rounded corners,
     align=center,
-    minimum width=3.3cm,
-    minimum height=1.15cm,
-    text width=3.1cm
+    minimum width=3.1cm,
+    minimum height=1.05cm,
+    text width=2.9cm
   },
   user/.style={block, fill=blue!12},
   data/.style={block, fill=green!12},
-  model/.style={block, fill=orange!18},
-  rules/.style={block, fill=yellow!25},
-  support/.style={block, fill=purple!12},
+  analysis/.style={block, fill=orange!18},
+  synthesis/.style={block, fill=yellow!25},
+  prognosis/.style={block, fill=purple!14},
   output/.style={block, fill=gray!15},
-  flow/.style={->, thick},
-  feedback/.style={->, thick, dashed}
+  stage/.style={draw=black!55, rounded corners, thick, inner sep=0.3cm},
+  flow/.style={->, thick}
 ]
 
-% User-facing input
-\node[user] (renter) {Renter\\
-Budget, location, space, bedrooms, required amenities};
+% Actors and input components
+\node[user] (renter) {Renter / decision-maker\\
+Supplies a listing and personal preferences};
+\node[user, right=of renter] (interface) {User interface\\
+Listing details and preference inputs};
+\node[data, below=of interface] (dataset) {Historical listing dataset\\
+UCI US apartment advertisements};
+\node[data, right=of dataset] (management) {Data management\\
+Cleaning, validation, feature preparation};
 
-\node[user, right=of renter] (interface) {Web interface\\
-Enter or select a listing and preferences};
+% The three stages from the course's cognitive-oriented architecture
+\node[analysis, right=1.4cm of management, yshift=0.65cm] (compare) {Data-driven analysis\\
+KNN comparable retrieval; candidate rent regression};
+\node[analysis, below=of compare] (constraints) {Knowledge-based analysis\\
+Mandatory budget and housing requirement rules};
+\node[synthesis, right=1.35cm of compare, yshift=-0.65cm] (synth) {Synthesis\\
+Combine constraints and optional preference score; form alternatives};
+\node[prognosis, right=of synth] (prognosis) {Prognosis\\
+Assess price position, fit, and evidence uncertainty};
+\node[output, right=of prognosis] (recommendation) {Decision support\\
+Shortlist, review, or skip with reasons};
 
-% Data and model path
-\node[data, below=of interface] (dataset) {Rental listings\\
-UCI Apartment for Rent Classified};
+% Visually group analysis modules
+\node[stage, fit=(compare)(constraints),
+  label={[font=\bfseries]above:ANALYSIS}] (analysis-stage) {};
+\node[stage, fit=(synth),
+  label={[font=\bfseries]above:SYNTHESIS}] (synthesis-stage) {};
+\node[stage, fit=(prognosis),
+  label={[font=\bfseries]above:PROGNOSIS}] (prognosis-stage) {};
 
-\node[data, right=of dataset] (preprocess) {Data management\\
-Validate, clean, and prepare listing attributes};
-
-\node[model, right=of preprocess] (estimate) {Comparable search and\\rent estimation\\
-Reference rent range and similar listings};
-
-% User preference/rule path
-\node[rules, below=of estimate] (rules) {Preference rules\\
-Check budget, location, space, bedrooms, and amenities};
-
-% Integration and output
-\node[support, right=2cm of estimate] (integration) {Decision support\\
-Combine price evidence, preference checks, and uncertainty};
-
-\node[output, right=of integration] (result) {Recommendation and explanation\\
-Shortlist, review, or skip};
-
-% Optional admin
-\node[user, above=of dataset] (admin) {Administrator / data maintainer\\
-Update data, preprocessing, model, and rules};
-
-% Information flows
+% Data and user flows
 \draw[flow] (renter) -- (interface);
-\draw[flow] (interface) -- node[above, align=center] {Listing details} (estimate);
-\draw[flow] (interface) |- node[pos=0.25, right, align=left] {Preferences} (rules);
-
-\draw[flow] (dataset) -- (preprocess);
-\draw[flow] (preprocess) -- (estimate);
-\draw[flow] (estimate) -- node[above, align=center] {Estimated rent and\\comparable listings} (integration);
-\draw[flow] (rules) -| node[pos=0.25, below, align=center] {Fit and constraint results} (integration);
-\draw[flow] (integration) -- (result);
-\draw[feedback] (result) |- node[pos=0.25, right, align=left] {Results shown to renter} (interface);
-
-\draw[feedback] (admin) -- (dataset);
-\draw[feedback] (admin) -- (preprocess);
-\draw[feedback] (admin) to[bend left=18] (estimate);
-\draw[feedback] (admin) to[bend right=18] (rules);
+\draw[flow] (interface) |- (compare);
+\draw[flow] (interface) |- (constraints);
+\draw[flow] (dataset) -- (management);
+\draw[flow] (management) -- (compare);
+\draw[flow] (management) |- (constraints);
+\draw[flow] (compare) -- (synth);
+\draw[flow] (constraints) -| (synth);
+\draw[flow] (synth) -- (prognosis);
+\draw[flow] (prognosis) -- (recommendation);
+\draw[flow] (recommendation) |- (interface);
 
 \end{tikzpicture}%
 }
-\caption{Functional architecture of the rental-home decision-support prototype.}
+\caption{RentWise architecture mapped to the course's analysis, synthesis, and prognosis stages. Candidate methods are subject to validation.}
 \label{fig:idss-architecture}
 \end{figure}
 
 \section{Modules and Information Flow}
 
-The prototype consists of the following modules:
+The proposed prototype consists of the following modules, aligned with
+Figure~\ref{fig:idss-architecture}:
 
 \begin{enumerate}
   \item \textbf{User interface:} collects listing details and the renter's
@@ -431,39 +443,45 @@ The prototype consists of the following modules:
   validates relevant fields, standardises units and categories, and
   prepares location and listing attributes for comparison and modelling.
 
-  \item \textbf{Comparable-listing and rent-estimation module:} identifies
-  similar records using available characteristics such as location, size,
-  bedrooms, and bathrooms, then estimates a reference asking rent. It
-  also reports how many comparable records support the estimate.
+  \item \textbf{Analysis modules:} the data-driven module retrieves
+  comparable records using characteristics such as location, size,
+  bedrooms, and bathrooms, and evaluates candidate regression models for
+  reference asking-rent estimation. The knowledge-based module checks
+  mandatory requirements. The actual model and evaluation results must
+  be specified after the proposed methods have been tested.
 
-  \item \textbf{Preference and rule-evaluation module:} compares the
-  listing with the user's budget and requirements, identifying met,
-  unmet, or unknown criteria.
+  \item \textbf{Synthesis module:} keeps mandatory rule checks separate
+  from optional preferences and combines them, potentially using a
+  Weighted Sum Model, to form the shortlist, review, and skip alternatives.
 
-  \item \textbf{Decision-support and explanation module:} combines the
-  price evidence, preference checks, and data-coverage information into
-  one of three outcomes: \emph{shortlist}, \emph{review}, or \emph{skip}.
-  It provides the main reasons for that outcome.
+  \item \textbf{Prognosis and explanation module:} assesses the price
+  position, fit, and uncertainty associated with each alternative, then
+  presents the recommendation and supporting reasons. It does not
+  forecast landlord responses or application success.
 
-  \item \textbf{Outcome-recording module (if implemented):} stores
-  user-entered viewing or offer outcomes for evaluation. These outcomes
-  are not treated as predictions of future landlord responses.
+  \item \textbf{User interface:} presents the evidence and recommendation
+  so the renter can accept, refine, or reject the system's advice.
 \end{enumerate}
 
-Information flows from the user's inputs and the listing data to the
-preprocessing and analysis modules. The rent-estimation and rule-evaluation
-modules produce separate results. The decision-support module combines
-them, then sends the recommendation and its explanation to the interface.
-The renter makes the final decision.
+Information flows from the renter's case and preferences, and from the
+historical dataset, into the analysis stage. The data-driven and
+knowledge-based analyses feed synthesis, which forms decision
+alternatives. Prognosis assesses their price position, fit, and
+uncertainty. The interface returns the recommendation and its evidence;
+the renter makes the final decision. The repository currently documents
+and implements data cleaning; the candidate recommendation models and
+Streamlit interface remain proposed components until implemented and
+evaluated.
 
 \section{Software Tools and Technologies}
 
-The prototype is implemented in Python. Python is used to load and
-preprocess the rental listings, train and run the rent-estimation model,
-and apply the explicit decision rules. A web interface allows renters
-to enter preferences and listing details and inspect recommendations.
-The implementation should name the specific Python libraries, model
-algorithm, storage method, and web framework used by the team.
+The repository uses Python 3.12 and the \texttt{uv} environment and
+dependency manager. The current cleaning pipeline uses Pandas and NumPy
+to prepare the UCI listing data. Scikit-learn is listed for candidate
+similarity and predictive modelling, while Streamlit is listed for the
+planned interface. These modelling and interface choices are proposals
+to be confirmed through implementation and evaluation; no final model
+algorithm or model performance is claimed in this chapter.
 
 % ============================================================
 % 4. DATA PREPROCESSING
