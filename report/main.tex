@@ -147,7 +147,7 @@ apartment listings by prospective renters. Renting a home is one of the
 largest recurring financial commitments a household makes, yet the decision
 is usually taken quickly, with partial information, and against asking
 prices set by the advertiser. The goal of the IDSS is to transform
-historical listing data and the renter's own requirements into an
+historical listing data and the renter's own preferences into an
 explainable recommendation on whether a listing deserves further attention.
 
 \section{Market and Data Context}
@@ -156,7 +156,7 @@ The system targets the United States apartment rental market as
 represented by classified advertisements. A renter typically finds a listing
 on a portal and must judge two things on their own: whether the
 asking rent is reasonable for what is offered, and whether the
-apartment fits their personal requirements. Asking rents vary
+apartment fits their personal preferences. Asking rents vary
 strongly with location, size, and amenities, so a price that is ordinary in
 one city may be excessive in another. Without access to comparable listings,
 the renter has little evidence with which to tell them apart.
@@ -182,19 +182,24 @@ tenant. The estimates produced by the IDSS are therefore interpreted as
 reference values within the market and period covered by the data, not as
 current market prices.
 
-\section{Decision Objectives and Constraints}
+\section{Decision Objectives}
+\label{sec:objectives}
 
-Supporting a renter's decision requires balancing two competing priorities:
+Supporting a renter's decision requires balancing two competing priorities
+within a limited search effort:
 
 \subsection*{Financial Protection: Avoiding Poor-Value Listings}
 
 Committing to an overpriced or unsuitable apartment has lasting
 consequences: a rental contract ties the renter to a monthly cost and a
 dwelling for months or years. For this reason, the IDSS checks the asking
-rent against comparable listings and treats the renter's mandatory
-requirements, such as the maximum budget or the minimum number of bedrooms,
-as hard constraints. A listing that fails one of them is not rescued by
-strong performance on optional preferences.
+rent against comparable listings and evaluates how well the listing
+satisfies the renter's own criteria, such as the budget, the size, or the
+amenities. Each criterion carries a weight that reflects its importance, so
+a small shortfall on one criterion can be offset by strengths on others.
+A criterion that the renter declares non-negotiable, however, acts as a
+veto: a listing that fails it is not rescued by strong performance
+elsewhere.
 
 \subsection*{Opportunity Preservation: Avoiding Unjustified Rejections}
 
@@ -202,10 +207,18 @@ Discarding a suitable apartment also has a cost, because good listings are
 scarce and are taken quickly. The system must not reject a listing on weak
 evidence. When too few comparable listings are available, or when important
 listing details are missing, the IDSS reports the uncertainty and asks the
-renter to look closer instead of issuing a negative price judgement.
+renter to look closer instead of issuing a negative judgement.
 
-These dual objectives shape the design of the rent-estimation,
-requirement-checking, and recommendation components of the IDSS. In both
+\subsection*{Search Effort: Spending Attention Where It Pays Off}
+
+Both objectives operate under a practical limit: the renter's time. Every
+listing that is pursued costs contacting the advertiser, asking questions,
+and attending a viewing. A useful system must therefore also set aside the
+listings that clearly do not deserve that effort, instead of sending every
+case back to the renter for closer inspection.
+
+These objectives shape the design of the rent-estimation,
+preference-evaluation, and recommendation components of the IDSS. In both
 cases the system acts as a decision-support tool: it presents a
 recommendation and the reasons behind it, while the decision to contact the
 advertiser, arrange a viewing, or apply remains with the renter.
@@ -225,19 +238,21 @@ the amount of evidence available, as outlined in Table~\ref{tab:recommendation-c
 \textbf{Class} & \textbf{Condition} & \textbf{Implication for the renter}\\
 \midrule
 Shortlist &
-All mandatory requirements are met, personal fit is good, and the asking
-rent is reasonable relative to comparable listings. &
+No non-negotiable criterion fails, the weighted personal fit is good, and
+the asking rent is reasonable relative to sufficient comparable
+listings. &
 The listing is worth pursuing: contact the advertiser or arrange a
 viewing.\\
 \addlinespace
 Review &
-Comparable evidence is limited, important listing information is missing,
-or the price or fit assessment is uncertain. &
+Comparable evidence is limited, a non-negotiable criterion cannot be
+verified from the listing, or the price or fit assessment is intermediate. &
 No firm judgement is supported: gather more information before deciding.\\
 \addlinespace
 Skip &
-A mandatory requirement is not met, or the listing is significantly
-overpriced according to sufficient comparable evidence. &
+A non-negotiable criterion is not met, the weighted personal fit is very
+low, or the listing is significantly overpriced according to sufficient
+comparable evidence. &
 The listing can be set aside so that effort goes to better candidates.\\
 \bottomrule
 \end{tabularx}
@@ -249,27 +264,306 @@ The listing can be set aside so that effort goes to better candidates.\\
 \chapter{Main Identified Decisions}
 \label{ch:decisions}
 
-[Identify the decisions that the system is intended to support. Explain who makes each decision, when it is made, what information is needed, and what the possible outcomes are.]
+RentWise supports one overarching decision: whether a renter should invest
+further effort in a specific apartment listing. This decision arises at the
+screening stage of an apartment search, after the renter has found an
+advertisement and before contacting the advertiser, arranging a viewing, or
+applying. At that moment the renter usually has only the information printed
+in the advertisement and a rough idea of local prices.
+
+The IDSS supports two decisions, both taken by the renter. The first is the
+specification of the renter's preferences, made before any listing is
+assessed. The second, and central, decision is what to do with the listing:
+pursue it, ask for missing information, or set it aside. To support this
+second decision, the IDSS performs three assessments: the price position of
+the listing relative to comparable listings, the personal fit of the listing
+to the renter's preferences, and a recommendation that combines both. The
+assessments are computed by the system; the decisions remain with the
+renter. This chapter describes the structure of the problem, the two
+decisions, and the assessments that support them.
+
+\section{Decision Structure of a Listing Assessment}
+
+The structure of the problem is formalised as the influence diagram in
+Figure~\ref{fig:influence-diagram}. Its two decision nodes correspond to
+the two decisions of the renter: the user preferences and the renter's
+action on the listing. Between them sit three deterministic variables,
+which are the assessments computed by the IDSS. The price position compares
+the asking rent with comparable listings, and therefore depends on the
+comparable evidence and on the apartment listing. The personal fit
+measures how well the listing satisfies the renter's preferences, and
+therefore depends on the apartment listing and on the preferences
+themselves. The recommendation combines both into the Shortlist, Review,
+or Skip class.
+
+Four variables are treated as uncertain. The current market, meaning
+the apartments available for rent and their asking rents at the time of
+the search, determines which listings the renter can find, and therefore
+the apartment listing that reaches the IDSS. The IDSS cannot observe it,
+because its data describe the market of 2019. The apartment listing is
+uncertain for a second reason as well: advertisements are incomplete and
+often omit information such as the pet policy or the list of amenities.
+The comparable evidence available in the historical data varies
+strongly between locations, so the reliability of the price position
+differs from one listing to another. Finally, the unobserved quality of
+the apartment, such as the condition of the building, the neighbourhood,
+or the landlord, is described neither by the advertisement nor by the
+data, yet it determines whether pursuing or discarding the listing turns
+out well.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/influence_diagram.png}
+\caption{Influence diagram of the listing assessment. U1: financial
+protection; U2: opportunity preservation; U3: search effort.}
+\label{fig:influence-diagram}
+\end{figure}
+
+The outcome of the decision is valued through three utility nodes. The first
+two correspond to the objectives introduced in \Cref{sec:objectives}: financial
+protection (U1), which is lost when the renter commits to an overpriced or
+unsuitable apartment, and opportunity preservation (U2), which is lost when
+a suitable apartment is discarded. The third, search effort (U3), reflects
+the time and attention spent on contacting advertisers and attending
+viewings. These utilities pull in different directions. A strict system
+protects U1 and saves effort but sacrifices U2, while a lenient system
+preserves opportunities at the cost of U1 and U3. The Review class exists
+to absorb the cases in which the evidence is not strong enough to resolve
+this tension in either direction.
+
+The current market also affects opportunity preservation directly. When
+few suitable apartments are available, good listings are taken quickly
+and discarding one is harder to recover from, so an unjustified Skip
+becomes more costly. The unobserved quality affects both financial
+protection and opportunity preservation in the same direct way: a
+listing that looks good on paper may hide defects, and one that looks
+average may be better than its advertisement suggests. Because both
+variables lie outside what the IDSS observes, they are among the reasons
+why the final decision remains with the renter.
+
+The recommendation reaches the renter's action through an information
+arc: the renter sees the class before acting, together with an
+explanation that reports the price position, the personal fit, and the
+reasons behind them, but is not bound by it. The separation between the recommendation, computed by the
+IDSS, and the action, chosen by the renter, is the human-in-the-loop
+principle of the system. Every decision
+with consequences outside the system, such as contacting an advertiser,
+paying an application fee, or signing a lease, remains with the renter.
+The roles of the renter and of the project maintainer are described in
+Table~\ref{tab:actors} of \Cref{ch:architecture}.
+
+\section{Decision 1: Preference Specification}
+
+The first decision is taken by the renter before any listing is assessed,
+and it parametrises every later step. For each criterion that matters to
+them, the renter states a target value and an importance weight between 0
+and 1. The criteria available are limited to the attributes recorded in the
+listings: monthly budget, floor area, bedrooms, bathrooms, amenities such as
+parking, an in-unit washer and dryer, a gym, or a pool, and pet policy.
+
+The weight expresses how much a criterion matters, and therefore how far a
+shortfall on it can be offset by strengths on other criteria. A renter with
+a budget of 2,000 USD and a weight of 0.7 accepts that a listing slightly
+above that amount may still be worth pursuing if it performs well on the
+remaining criteria. A weight of 1.0 has a special meaning: it marks the
+criterion as non-negotiable. A renter with a dog, for example, can declare
+that the pet policy must allow dogs, and no combination of amenities will
+compensate for a listing that does not.
+
+Aspects that the data does not describe, such as neighbourhood quality,
+building condition, or lease terms, are outside the scope of the
+assessment and remain the renter's own judgement. Location enters the
+assessment through the price position, where comparable listings are taken
+from the same city, rather than as a preference. The renter may revise the
+preferences after seeing the results, for example by lowering the weight of
+a criterion that causes too many listings to fall short. Such a revision is
+the same decision taken again, not a new one.
+
+\section{Price Assessment}
+
+The price assessment answers the first question raised in
+\Cref{ch:domain}: whether the asking rent is reasonable for what the
+listing offers. It does not use the renter's preferences, since the value
+of an apartment relative to the market is the same whoever assesses it. It
+involves four steps.
+
+\paragraph{Selecting the comparable listings.} The IDSS selects the historical
+listings that are most similar to the one under assessment, using location,
+floor area, bedrooms, and bathrooms. Because the coordinates in the data
+are coarse, often a single point per city, location is in practice matched
+at city level, with nearby areas considered when the city alone provides
+too few listings.
+
+\paragraph{Judging whether the evidence is sufficient.} Coverage of the data is uneven:
+half of the cities in the cleaned dataset have three listings or fewer.
+When the comparable set is too small or too dissimilar, the IDSS withholds
+the price judgement and reports the lack of evidence instead of issuing an
+estimate. This step is the main safeguard of opportunity preservation,
+since it prevents a listing from being skipped on weak evidence.
+
+\paragraph{Establishing a reference asking rent.} When the evidence is sufficient, the
+reference value is derived from the comparable listings and, if it proves
+reliable during validation, complemented by a regression estimate. The
+reference is expressed in 2019 US dollars and describes historical asking
+rents, not current or negotiated prices.
+
+\paragraph{Positioning the asking rent.} The asking rent is placed relative to the
+reference value as below the reference, in line with it, moderately above
+it, or significantly above it. The bands that separate these positions are
+parameters of the system, derived from the deviations observed between
+asking rents and their reference values during validation
+(\Cref{ch:validation}).
+
+\section{Personal-Fit Assessment}
+
+The second question of \Cref{ch:domain}, whether the apartment suits the
+renter, is answered by evaluating the listing against the preferences
+specified in the first decision. It involves three steps.
+
+\paragraph{Measuring the satisfaction of each criterion.} Each criterion
+receives a degree of satisfaction between 0 and 1 rather than a simple pass
+or fail. For the budget, satisfaction is complete when the asking rent is
+within the stated amount and decreases gradually as the rent exceeds it,
+reaching zero at the end of a tolerance band. Floor area, bedrooms, and
+bathrooms are treated in the same way: a listing slightly below the target
+satisfies the criterion partially, while one far below it does not satisfy
+it at all. Amenities and pet policy are satisfied or not. The width of the
+tolerance bands is a parameter of the system, described in
+\Cref{ch:modeldriven}.
+
+\paragraph{Handling information the listing does not state.} Missing
+information is frequent: 55\% of the cleaned listings do not state a pet
+policy, and 17\% do not include an amenity list. Counting a missing item as
+unsatisfied would penalise listings for what the advertisement omits, which
+contradicts opportunity preservation; counting it as satisfied would hide a
+real risk. A criterion that cannot be verified is therefore excluded from
+the score and named in the explanation, so that the renter knows what to
+ask the advertiser.
+
+\paragraph{Combining the criteria.} The degrees of satisfaction of the
+verifiable criteria are combined into a personal-fit score using the
+renter's weights; the proposed method is a Weighted Sum Model. Non-negotiable
+criteria are checked separately and act as a veto: if one of them is not
+satisfied, the listing cannot be recommended, whatever its score. The
+result of this step is the personal-fit score, together with any veto and
+the list of criteria that could not be verified.
+
+\section{Recommendation}
+
+The IDSS combines the price position and the personal fit into one of the
+three classes defined in Table~\ref{tab:recommendation-classes}. The
+combination follows a fixed order of precedence:
+
+\begin{enumerate}[leftmargin=*]
+  \item If a non-negotiable criterion is not satisfied, the listing is
+  classified as Skip.
+  \item If the asking rent is significantly above the reference value and
+  the comparable evidence is sufficient, or if the personal-fit score is
+  very low, the listing is classified as Skip.
+  \item If a non-negotiable criterion cannot be verified, the comparable
+  evidence is insufficient, the asking rent is moderately above the
+  reference, or the personal-fit score is intermediate, the listing is
+  classified as Review.
+  \item Otherwise, the listing is classified as Shortlist.
+\end{enumerate}
+
+Together with the class, the IDSS selects the reasons to present: the
+criteria that limited the score or could not be verified, the comparable
+listings used, the gap between the asking rent and the reference value, and
+the amount of evidence behind the price judgement. The score thresholds and
+the rules that implement this combination are described in
+\Cref{ch:modeldriven}.
+
+The two possible errors of the recommendation have different costs. An
+unjustified Skip removes a suitable apartment from the search and damages
+opportunity preservation (U2). An unjustified Shortlist exposes the renter
+to an overpriced or unsuitable apartment and costs a viewing that leads
+nowhere (U1 and U3). Neither error is assumed to be negligible, so the IDSS
+issues a Skip only on firm evidence, namely a failed non-negotiable
+criterion, a clearly insufficient personal fit, or a clear price gap
+supported by enough comparable listings, and sends every doubtful case to
+Review.
+
+\section{Decision 2: Action on the Listing}
+
+The recommendation closes the assessment, but not the decision, which is
+taken by the renter with the recommendation and its explanation at hand.
+After a Shortlist, the renter decides whether to contact the advertiser, arrange a
+viewing, or apply. After a Review, the renter decides whether to obtain the
+missing information, for instance by asking the advertiser about the pet
+policy, and assess the listing again, or to move on to other candidates.
+After a Skip, the renter normally sets the listing aside, but may override
+the recommendation for reasons the data does not capture, such as a
+preferred neighbourhood. At any point the renter may also revise the
+preferences, which returns the process to the first decision.
+
+Several choices in the rental process are deliberately not supported:
+the IDSS does not negotiate the rent, does not predict whether a landlord
+will accept an application, and does not forecast the final agreed rent.
+
+\section{Summary of Decisions and Assessments}
+
+Table~\ref{tab:decisions} summarises the two decisions of the renter and
+the three assessments that the IDSS computes to support them, in the order
+in which they occur during the assessment of a listing.
 
 \begin{table}[H]
 \centering
-\caption{Main decisions supported by the proposed IDSS.}
+\small
+\caption{Decisions supported by the RentWise IDSS and the assessments that support them.}
 \label{tab:decisions}
-\begin{tabularx}{\textwidth}{p{0.7cm} p{3cm} p{2.5cm} X}
+\begin{tabularx}{\textwidth}{p{0.6cm} p{2.8cm} p{1.8cm} X X}
 \toprule
-\textbf{ID} & \textbf{Decision} & \textbf{Decision-maker} & \textbf{Information required / expected output}\\
+\textbf{ID} & \textbf{Name} & \textbf{Made by} &
+\textbf{Information required} & \textbf{Possible outcomes}\\
 \midrule
-D1 & [Decision 1] & [Actor] & [Information and output]\\
-D2 & [Decision 2] & [Actor] & [Information and output]\\
-D3 & [Decision 3] & [Actor] & [Information and output]\\
+\multicolumn{5}{l}{\emph{Decisions}}\\
+\addlinespace
+D1 & Specify preferences & Renter &
+Personal priorities; attributes available in the listings &
+Target value and weight for each criterion; non-negotiable criteria marked
+with weight 1.0\\
+\addlinespace
+D2 & Act on the listing & Renter &
+Recommendation and explanation from A3 &
+Pursue, ask for missing information, set aside, or revise D1\\
+\midrule
+\multicolumn{5}{l}{\emph{Assessments}}\\
+\addlinespace
+A1 & Price position & IDSS &
+Location, floor area, bedrooms, bathrooms, and asking rent of the listing;
+comparable historical listings &
+Below, in line, moderately above, or significantly above the reference; no
+judgement if evidence is insufficient\\
+\addlinespace
+A2 & Personal fit & IDSS &
+Listing attributes; preferences from D1 &
+Personal-fit score; veto if a non-negotiable criterion fails; criteria
+that could not be verified\\
+\addlinespace
+A3 & Recommendation & IDSS &
+Outcomes of A1 and A2 &
+Shortlist, Review, or Skip, with reasons\\
 \bottomrule
 \end{tabularx}
 \end{table}
+
+The decisions and assessments match the nodes of
+Figure~\ref{fig:influence-diagram}: D1 and D2 are its decision nodes, and
+A1, A2, and A3 its deterministic nodes. They also follow the stages of the
+architecture presented in \Cref{ch:architecture}. A1 and the satisfaction
+of each criterion in A2 belong to the analysis stage; the combination of
+the criteria in A2 and the recommendation A3 belong to synthesis; and
+prognosis describes what the renter risks with each option of D2, in terms
+of the three utilities. D1 and D2 take place through the user interface.
+In every case, the IDSS supplies evidence and a reasoned recommendation,
+while the choice of what to do with the apartment remains with the renter.
 
 % ============================================================
 % 3. FUNCTIONAL ARCHITECTURE
 % ============================================================
 \chapter{Functional Architecture of the IDSS Prototype}
+\label{ch:architecture}
 
 \section{System Actors and User Roles}
 
@@ -290,13 +584,13 @@ architecture and should be updated as those components are implemented.
 \textbf{Actor} & \textbf{Responsibilities} & \textbf{System functionalities} \\
 \midrule
 Renter / decision-maker &
-Provides the listing under assessment and specifies a budget, location
-preferences, minimum size or bedroom requirements, mandatory amenities,
-and optional preferences. Reviews the evidence and makes the final
+Provides the listing under assessment and specifies criteria such as
+budget, size, bedrooms, amenities, and pet policy, each with an importance
+weight, marking any non-negotiable criterion. Reviews the evidence and makes the final
 housing decision. &
 Enters listing details and preferences; views comparable listings, the
-reference asking-rent estimate, mandatory-requirement checks, optional
-preference score, uncertainty information, and the shortlist, review, or
+reference asking-rent estimate, personal-fit score, non-negotiable
+criteria that fail or cannot be verified, uncertainty information, and the shortlist, review, or
 skip recommendation with its explanation. \\
 \addlinespace
 Project / data maintainer &
@@ -316,8 +610,9 @@ process through three successive stages: \emph{analysis},
 \emph{synthesis}, and \emph{prognosis}. The user interface collects the
 case to assess and the renter's preferences. A data-management component
 prepares historical listings for the data-driven models. A knowledge
-component holds the mandatory constraints and the rules for interpreting
-missing or weak evidence. The inference and decision-support components
+component holds the satisfaction functions applied to the renter's
+criteria, the veto for non-negotiable criteria, and the rules for
+interpreting missing or weak evidence. The inference and decision-support components
 combine these inputs and return an explained recommendation to the renter.
 
 The initial data source is the UCI \emph{Apartment for Rent Classified}
@@ -333,25 +628,31 @@ country's market \cite{uci_apartment_dataset}.
 the listing attributes used for comparison. The repository's cleaning
 script produces a processed dataset while preserving the original raw
 file. The proposed analysis uses K-nearest neighbours to retrieve similar
-listings and investigates regression models as a source of a reference
-asking-rent estimate. In parallel, rule-based checks identify whether
-mandatory requirements, such as maximum budget or minimum bedrooms, are
-met. KNN, regression, the weighted-sum model, and Streamlit are recorded
+listings, derives a reference asking rent from them, and places the
+listing's asking rent relative to that reference, which gives its price
+position. Regression models are investigated as an additional source of
+the reference estimate. In parallel, the knowledge-based analysis
+measures how far the listing satisfies each of the renter's criteria,
+such as the budget or the number of bedrooms, and checks whether any
+non-negotiable criterion fails or cannot be verified. KNN, regression, the weighted-sum model, and Streamlit are recorded
 in the repository as proposed methods and tools; their final selection
 and performance must be reported after evaluation.
 
 \paragraph{Synthesis.} The decision-support component combines the
-mandatory-rule results with the renter's optional preferences. The
-proposed Weighted Sum Model can rank or score options on optional
-criteria, while mandatory constraints remain explicit. The component
-forms the shortlist, review, and skip alternatives and attaches the
-reasons and evidence for each result.
+degrees of satisfaction into a personal-fit score using the renter's
+weights, with the Weighted Sum Model as the proposed method, while
+non-negotiable criteria remain an explicit veto. It then combines the
+personal fit with the price position obtained in the analysis stage and
+selects one of the shortlist, review, and skip alternatives, attaching the
+reasons and evidence behind the result.
 
-\paragraph{Prognosis.} For each alternative, the system assesses the
-decision-relevant consequences supported by the available evidence:
-asking-rent position relative to comparable listings, budget fit,
-preference fit, and uncertainty due to sparse comparisons or missing
-details. This is a prognosis of the listing assessment, not a prediction
+\paragraph{Prognosis.} The system describes what the renter risks with
+each possible action on the listing: committing to an overpriced or
+unsuitable apartment, losing a suitable one, or spending effort on
+contacts and viewings. It also reports the uncertainty behind the
+recommendation, due to sparse comparisons, criteria that the listing does
+not state, and factors that the data cannot observe, such as the current
+market. This is a prognosis of the listing assessment, not a prediction
 of landlord responses, application success, or the final negotiated rent.
 The recommendation and explanation are returned through the interface;
 the renter accepts, refines, or rejects the advice.
@@ -392,13 +693,13 @@ Cleaning, validation, feature preparation};
 
 % The three stages from the course's cognitive-oriented architecture
 \node[analysis, right=1.4cm of management, yshift=0.65cm] (compare) {Data-driven analysis\\
-KNN comparable retrieval; candidate rent regression};
+KNN comparables; reference rent and price position};
 \node[analysis, below=of compare] (constraints) {Knowledge-based analysis\\
-Mandatory budget and housing requirement rules};
+Criterion satisfaction and non-negotiable veto};
 \node[synthesis, right=1.35cm of compare, yshift=-0.65cm] (synth) {Synthesis\\
-Combine constraints and optional preference score; form alternatives};
+Weighted personal fit; Shortlist, Review, or Skip};
 \node[prognosis, right=of synth] (prognosis) {Prognosis\\
-Assess price position, fit, and evidence uncertainty};
+Consequences of each action and evidence uncertainty};
 \node[output, right=of prognosis] (recommendation) {Decision support\\
 Shortlist, review, or skip with reasons};
 
@@ -445,18 +746,21 @@ Figure~\ref{fig:idss-architecture}:
 
   \item \textbf{Analysis modules:} the data-driven module retrieves
   comparable records using characteristics such as location, size,
-  bedrooms, and bathrooms, and evaluates candidate regression models for
-  reference asking-rent estimation. The knowledge-based module checks
-  mandatory requirements. The actual model and evaluation results must
+  bedrooms, and bathrooms, derives the reference asking rent, with
+  candidate regression models as an additional estimate, and determines
+  the price position of the listing. The knowledge-based module measures
+  the satisfaction of the renter's criteria and checks non-negotiable
+  ones. The actual model and evaluation results must
   be specified after the proposed methods have been tested.
 
-  \item \textbf{Synthesis module:} keeps mandatory rule checks separate
-  from optional preferences and combines them, potentially using a
-  Weighted Sum Model, to form the shortlist, review, and skip alternatives.
+  \item \textbf{Synthesis module:} combines the weighted criteria,
+  potentially using a Weighted Sum Model, applies the veto of
+  non-negotiable criteria, and combines the resulting personal fit with
+  the price position to select the shortlist, review, or skip alternative.
 
-  \item \textbf{Prognosis and explanation module:} assesses the price
-  position, fit, and uncertainty associated with each alternative, then
-  presents the recommendation and supporting reasons. It does not
+  \item \textbf{Prognosis and explanation module:} describes what the
+  renter risks with each possible action and the uncertainty behind the
+  recommendation, then presents the recommendation and supporting reasons. It does not
   forecast landlord responses or application success.
 
   \item \textbf{User interface:} presents the evidence and recommendation
@@ -465,9 +769,9 @@ Figure~\ref{fig:idss-architecture}:
 
 Information flows from the renter's case and preferences, and from the
 historical dataset, into the analysis stage. The data-driven and
-knowledge-based analyses feed synthesis, which forms decision
-alternatives. Prognosis assesses their price position, fit, and
-uncertainty. The interface returns the recommendation and its evidence;
+knowledge-based analyses feed synthesis, which selects the recommended
+alternative. Prognosis describes the consequences and uncertainty of
+acting on it. The interface returns the recommendation and its evidence;
 the renter makes the final decision. The repository currently documents
 and implements data cleaning; the candidate recommendation models and
 Streamlit interface remain proposed components until implemented and
