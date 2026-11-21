@@ -1,3 +1,4 @@
+<?xml version='1.0' encoding='utf-8'?>
 <mxfile host="app.diagrams.net">
   <diagram name="Page-1" id="C4CGfI3WWGCkophbKdyj">
     <mxGraphModel dx="1397" dy="972" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
@@ -46,14 +47,14 @@
         <mxCell id="sYO1guwYKgtO-N5aYAkr-15" parent="1" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;" value="" vertex="1">
           <mxGeometry height="60" width="120" x="690" y="231" as="geometry" />
         </mxCell>
-        <mxCell id="sYO1guwYKgtO-N5aYAkr-16" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="KNN&lt;div&gt;Comparable rent&lt;/div&gt;" vertex="1">
-          <mxGeometry height="30" width="60" x="720" y="246" as="geometry" />
+        <mxCell id="sYO1guwYKgtO-N5aYAkr-16" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="A1 Price position&lt;div&gt;Comparable listings + evidence&lt;/div&gt;" vertex="1">
+          <mxGeometry height="50" width="120" x="690" y="236" as="geometry" />
         </mxCell>
         <mxCell id="sYO1guwYKgtO-N5aYAkr-17" parent="1" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;" value="" vertex="1">
           <mxGeometry height="60" width="120" x="900" y="231" as="geometry" />
         </mxCell>
-        <mxCell id="sYO1guwYKgtO-N5aYAkr-18" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Requirements checks&lt;div&gt;Budget + must-haves&lt;/div&gt;" vertex="1">
-          <mxGeometry height="30" width="120" x="900" y="246" as="geometry" />
+        <mxCell id="sYO1guwYKgtO-N5aYAkr-18" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="A2 Personal fit&lt;div&gt;Weighted criteria + veto&lt;/div&gt;" vertex="1">
+          <mxGeometry height="50" width="120" x="900" y="236" as="geometry" />
         </mxCell>
         <mxCell id="sYO1guwYKgtO-N5aYAkr-21" edge="1" parent="1" source="sYO1guwYKgtO-N5aYAkr-19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;defaultLabelBackgroundColor=page;labelPadding=0 4;" target="sYO1guwYKgtO-N5aYAkr-18">
           <mxGeometry relative="1" as="geometry" />
@@ -73,8 +74,8 @@
         <mxCell id="sYO1guwYKgtO-N5aYAkr-25" edge="1" parent="1" source="sYO1guwYKgtO-N5aYAkr-23" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;defaultLabelBackgroundColor=page;labelPadding=0 4;" target="sYO1guwYKgtO-N5aYAkr-17">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="sYO1guwYKgtO-N5aYAkr-23" parent="1" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;" value="Renter input:&lt;div&gt;Listing + needs&lt;/div&gt;" vertex="1">
-          <mxGeometry height="60" width="120" x="850" y="51.79" as="geometry" />
+        <mxCell id="sYO1guwYKgtO-N5aYAkr-23" parent="1" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;" value="Renter input:&lt;div&gt;D1 preferences + listing&lt;/div&gt;" vertex="1">
+          <mxGeometry height="50" width="120" x="850" y="56.79" as="geometry" />
         </mxCell>
         <mxCell id="sYO1guwYKgtO-N5aYAkr-30" edge="1" parent="1" source="sYO1guwYKgtO-N5aYAkr-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;defaultLabelBackgroundColor=page;labelPadding=0 4;" target="sYO1guwYKgtO-N5aYAkr-15">
           <mxGeometry relative="1" as="geometry">
@@ -89,11 +90,11 @@
         <mxCell id="sYO1guwYKgtO-N5aYAkr-40" edge="1" parent="1" source="sYO1guwYKgtO-N5aYAkr-32" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;defaultLabelBackgroundColor=page;labelPadding=0 4;" target="sYO1guwYKgtO-N5aYAkr-33">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="sYO1guwYKgtO-N5aYAkr-32" parent="1" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;" value="Synthesis:&lt;div&gt;combine price, fit and evidence&lt;/div&gt;" vertex="1">
+        <mxCell id="sYO1guwYKgtO-N5aYAkr-32" parent="1" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;" value="A3 Recommendation&lt;div&gt;Shortlist / Review / Skip&lt;/div&gt;" vertex="1">
           <mxGeometry height="60" width="120" x="690" y="410" as="geometry" />
         </mxCell>
-        <mxCell id="sYO1guwYKgtO-N5aYAkr-33" parent="1" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;" value="Prognosis:&lt;div&gt;shortlist/review/skip reasons + uncertainty&lt;/div&gt;" vertex="1">
-          <mxGeometry height="60" width="120" x="920" y="410" as="geometry" />
+        <mxCell id="sYO1guwYKgtO-N5aYAkr-33" parent="1" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;" value="D2 Action + prognosis&lt;div&gt;Pursue / ask / set aside&lt;/div&gt;&lt;div&gt;U1 / U2 / U3 consequences + uncertainty&lt;/div&gt;" vertex="1">
+          <mxGeometry height="80" width="200" x="850" y="400" as="geometry" />
         </mxCell>
         <mxCell id="sYO1guwYKgtO-N5aYAkr-34" edge="1" parent="1" source="sYO1guwYKgtO-N5aYAkr-15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;defaultLabelBackgroundColor=page;labelPadding=0 4;" target="sYO1guwYKgtO-N5aYAkr-32">
           <mxGeometry relative="1" x="0.1974" as="geometry">
