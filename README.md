@@ -1,12 +1,12 @@
 # RentWise IDSS
 
-An Intelligent Decision Support System (IDSS) that helps users assess whether an apartment listing offers reasonable value and matches their personal requirements.
+An Intelligent Decision Support System (IDSS) that helps users assess whether an apartment listing offers reasonable value and matches their personal preferences.
 
-The user provides an apartment listing and their preferences. The system evaluates the asking rent against comparable listings, checks mandatory requirements and optional preferences, and produces an explainable recommendation:
+The user provides an apartment listing they have found and their preferences. Each preference (budget, size, bedrooms, bathrooms, amenities, pet policy) has a target value and an importance weight between 0 and 1; a weight of 1.0 marks it as non-negotiable. The system evaluates the asking rent against comparable listings, measures how well the listing satisfies the weighted preferences, and produces an explainable recommendation:
 
-- **Shortlist** — the apartment meets mandatory requirements and appears to offer reasonable value.
-- **Review** — more information or comparable listings are needed, or some aspects require closer consideration.
-- **Skip** — the apartment fails a mandatory requirement or appears to offer poor value when sufficient comparison data is available.
+- **Shortlist** — no non-negotiable preference fails, the weighted personal fit is good and the apartment appears to offer reasonable value.
+- **Review** — more information or comparable listings are needed (for example, a non-negotiable preference cannot be verified from the listing), or the price or fit assessment is intermediate.
+- **Skip** — the apartment fails a non-negotiable preference, has a very low personal fit, or appears to offer poor value when sufficient comparison data is available.
 
 ## Setup (uv)
 *I (lars) preferably use uv. The same setup can be done using other tools like pip or conda*
@@ -56,8 +56,8 @@ The initial proposal is to investigate:
 
 - **K-Nearest Neighbors (KNN):** retrieve similar apartment listings.
 - **Regression models:** estimate an expected asking rent; compare a simple baseline with models such as Random Forest.
-- **Weighted Sum Model (WSM):** combine the user's optional preferences.
-- **Rule-based checks:** enforce mandatory requirements such as maximum budget or minimum bedrooms.
+- **Weighted Sum Model (WSM):** combine the user's weighted preferences into a personal-fit score. Each preference is satisfied to a degree between 0 and 1 (for example, satisfaction decreases gradually as the rent exceeds the budget), so a small shortfall on one preference can be offset by others.
+- **Rule-based checks:** apply the veto of non-negotiable preferences (weight 1.0) and the rules that turn price position and personal fit into a recommendation. Preferences the listing does not state (such as an unstated pet policy) are excluded from the score and flagged instead of counted as failed.
 - **Python, Pandas, NumPy and Scikit-learn:** data preparation and modelling.
 - **Streamlit:** prototype user interface.
 
