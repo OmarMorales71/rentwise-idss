@@ -567,13 +567,12 @@ while the choice of what to do with the apartment remains with the renter.
 
 \section{System Actors and User Roles}
 
-RentWise is designed as an interactive decision-support tool for a renter
-assessing an apartment listing. The system analyses the evidence and
-explains its recommendation, while the renter retains responsibility for
-the decision to contact the advertiser, arrange a viewing, or apply. The
-repository currently contains the data-cleaning pipeline; the modelling
-and user-interface components below describe the proposed prototype
-architecture and should be updated as those components are implemented.
+RentWise supports a prospective renter who is assessing an apartment listing.
+The renter supplies the listing information and personal requirements, reviews
+the evidence and recommendation, and retains control of the housing decision.
+A second role maintains the data and prototype. This is a technical role; the
+system does not introduce a separate administrator or a market decision-maker.
+Table~\ref{tab:actors} summarizes the users and their functions.
 
 \begin{table}[htbp]
 \centering
@@ -584,198 +583,129 @@ architecture and should be updated as those components are implemented.
 \textbf{Actor} & \textbf{Responsibilities} & \textbf{System functionalities} \\
 \midrule
 Renter / decision-maker &
-Provides the listing under assessment and specifies criteria such as
-budget, size, bedrooms, amenities, and pet policy, each with an importance
-weight, marking any non-negotiable criterion. Reviews the evidence and makes the final
-housing decision. &
-Enters listing details and preferences; views comparable listings, the
-reference asking-rent estimate, personal-fit score, non-negotiable
-criteria that fail or cannot be verified, uncertainty information, and the shortlist, review, or
-skip recommendation with its explanation. \\
+Enters a listing and sets requirements for budget, size, bedrooms, amenities,
+and pet policy. Each requirement has an importance weight; a weight of 1.0
+marks a non-negotiable requirement. The renter reviews the result and makes
+the final decision. &
+Views comparable listings and the reference asking-rent estimate, the price
+position, personal fit, failed or unverifiable non-negotiable requirements,
+uncertainty, and an explained Shortlist, Review, or Skip recommendation. \\
 \addlinespace
 Project / data maintainer &
-Prepares the historical listing data and maintains the prototype's
-preprocessing, candidate models, and decision rules. This is a development
-and maintenance role, not a separate rental-market decision-maker. &
-Runs the cleaning pipeline; checks data coverage and quality; evaluates
-candidate methods; and updates the application as the design is validated. \\
+Maintains the data-preparation workflow and the prototype's candidate models
+and decision rules. &
+Runs the cleaning pipeline, checks data quality and coverage, evaluates
+candidate methods, and updates the prototype as its design is validated. \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 \section{General Architecture}
 
-The architecture instantiates the course's cognitive-oriented IDSS
-process through three successive stages: \emph{analysis},
-\emph{synthesis}, and \emph{prognosis}. The user interface collects the
-case to assess and the renter's preferences. A data-management component
-prepares historical listings for the data-driven models. A knowledge
-component holds the satisfaction functions applied to the renter's
-criteria, the veto for non-negotiable criteria, and the rules for
-interpreting missing or weak evidence. The inference and decision-support components
-combine these inputs and return an explained recommendation to the renter.
+The architecture follows the course's cognitive-oriented IDSS sequence of
+\emph{analysis}, \emph{synthesis}, and \emph{prognosis}. Data preparation
+provides validated historical listings for analysis. The renter supplies a
+listing and preferences. The analysis stage estimates the listing's price
+position from comparable advertisements and checks how well the listing meets
+the renter's requirements. Synthesis combines those assessments into a
+recommendation. Prognosis explains the consequences and uncertainty associated
+with the decision. The recommendation and its evidence return to the renter,
+who makes the final choice.
 
-The initial data source is the UCI \emph{Apartment for Rent Classified}
-dataset. It includes listing attributes such as price, square footage,
-bedrooms, bathrooms, amenities, city, state, coordinates, and listing
-time. The repository identifies its geographic scope as the United States
-and its records as historical listings from 2019. Therefore, outputs are
-reference estimates based on historical US asking rents in USD; they are
-not evidence of current rents, final transaction prices, or another
-country's market \cite{uci_apartment_dataset}.
+The data source is the UCI \emph{Apartment for Rent Classified} 100K dataset.
+It contains US advertisements from 2018--2019, including asking rent, area,
+bedrooms, bathrooms, location, amenities, and listing time. The data and the
+implemented cleaning workflow are described in Chapter~\ref{ch:preprocessing}.
+Consequently, any price comparison is a reference to historical US asking
+rents in USD; it is not an estimate of current rents, final transaction
+prices, or rents in another country \cite{uci_apartment_dataset}.
 
-\paragraph{Analysis.} The data-management component validates and prepares
-the listing attributes used for comparison. The repository's cleaning
-script produces a processed dataset while preserving the original raw
-file. The proposed analysis uses K-nearest neighbours to retrieve similar
-listings, derives a reference asking rent from them, and places the
-listing's asking rent relative to that reference, which gives its price
-position. Regression models are investigated as an additional source of
-the reference estimate. In parallel, the knowledge-based analysis
-measures how far the listing satisfies each of the renter's criteria,
-such as the budget or the number of bedrooms, and checks whether any
-non-negotiable criterion fails or cannot be verified. KNN, regression, the weighted-sum model, and Streamlit are recorded
-in the repository as proposed methods and tools; their final selection
-and performance must be reported after evaluation.
+\paragraph{Data preparation.} The repository's Python script selects
+apartment listings, validates required fields and location, applies stated
+plausibility limits, removes duplicate advertisements and reposts, and writes
+a processed CSV while leaving the raw data unchanged. The resulting file is the
+listing store shown in Figure~\ref{fig:idss-architecture}. The project has
+implemented this preparation component; the decision models and user interface
+shown in the architecture remain planned components.
 
-\paragraph{Synthesis.} The decision-support component combines the
-degrees of satisfaction into a personal-fit score using the renter's
-weights, with the Weighted Sum Model as the proposed method, while
-non-negotiable criteria remain an explicit veto. It then combines the
-personal fit with the price position obtained in the analysis stage and
-selects one of the shortlist, review, and skip alternatives, attaching the
-reasons and evidence behind the result.
+\paragraph{Analysis.} The data-driven component is designed to retrieve
+comparable listings using attributes such as location, area, bedrooms, and
+bathrooms. Their asking rents provide evidence for a reference rent and the
+listing's price position. K-nearest neighbours (KNN) is a candidate method;
+regression is also considered as an additional estimator. In parallel, a
+knowledge-based component evaluates the renter's weighted requirements and
+checks non-negotiable criteria. The Weighted Sum Model (WSM) and explicit veto
+rules are proposed for this assessment. Missing information is treated as
+unknown: an unverifiable non-negotiable requirement leads to Review rather
+than being counted as a failure. KNN, regression, WSM, and their thresholds
+must be evaluated before they can be reported as final methods.
 
-\paragraph{Prognosis.} The system describes what the renter risks with
-each possible action on the listing: committing to an overpriced or
-unsuitable apartment, losing a suitable one, or spending effort on
-contacts and viewings. It also reports the uncertainty behind the
-recommendation, due to sparse comparisons, criteria that the listing does
-not state, and factors that the data cannot observe, such as the current
-market. This is a prognosis of the listing assessment, not a prediction
-of landlord responses, application success, or the final negotiated rent.
-The recommendation and explanation are returned through the interface;
-the renter accepts, refines, or rejects the advice.
+\paragraph{Synthesis.} Synthesis combines the price position with personal
+fit and applies the non-negotiable veto. It selects Shortlist, Review, or Skip
+and attaches the evidence and reasons. A listing is shortlisted when its fit
+and price are supported by sufficient evidence and no non-negotiable criterion
+fails. Limited comparables, intermediate assessments, or important missing
+details lead to Review. A failed non-negotiable requirement or clearly poor
+value with sufficient comparables can lead to Skip.
 
-\begin{figure}[htbp]
+\paragraph{Prognosis and renter action.} Prognosis relates the recommendation
+to the project's three decision objectives: U1 financial protection, U2
+opportunity preservation, and U3 search effort. It also communicates
+uncertainty from sparse comparisons, unstated listing details, and the
+historical data. This stage explains possible consequences; it does not
+predict landlord responses, application success, or the final negotiated
+rent. The renter may pursue the listing, ask for more information, or set it
+aside.
+
+\begin{figure}[p]
 \centering
-\resizebox{\textwidth}{!}{%
-\begin{tikzpicture}[
-  >=Stealth,
-  node distance=0.75cm and 0.9cm,
-  block/.style={
-    draw,
-    rounded corners,
-    align=center,
-    minimum width=2.65cm,
-    minimum height=0.9cm,
-    text width=2.45cm,
-    font=\small
-  },
-  user/.style={block, fill=blue!12},
-  data/.style={block, fill=green!12},
-  analysis/.style={block, fill=orange!18},
-  synthesis/.style={block, fill=yellow!25},
-  prognosis/.style={block, fill=purple!14},
-  output/.style={block, fill=gray!15},
-  stage/.style={draw=black!55, rounded corners, thick, inner sep=0.3cm},
-  flow/.style={->, thick}
-]
-
-% Three-column layout keeps the architecture readable at page width.
-\node[user] (renter) {Renter\\Listing and needs};
-\node[user, below=of renter] (interface) {User interface\\Inputs and results};
-\node[data, below=of interface] (dataset) {UCI apartment listings\\Historical US ads};
-\node[data, below=of dataset] (management) {Data management\\Clean and prepare};
-
-% Analysis stage: data-driven comparisons and knowledge-based checks.
-\node[analysis, right=1.0cm of renter, yshift=-0.7cm] (compare) {Data-driven analysis\\KNN comparables; candidate rent model};
-\node[analysis, below=of compare] (constraints) {Knowledge-based analysis\\Budget and must-have checks};
-\node[stage, fit=(compare)(constraints),
-  label={[font=\bfseries]above:ANALYSIS}] (analysis-stage) {};
-
-% Synthesis and prognosis lead to an explained recommendation.
-\node[synthesis, right=1.0cm of compare, yshift=-0.7cm] (synth) {Synthesis\\Combine price and fit evidence};
-\node[prognosis, below=of synth] (prognosis) {Prognosis\\U1 financial protection\\U2 opportunity\\U3 search effort};
-\node[output, below=of prognosis] (recommendation) {Decision support\\Shortlist / review / skip\\Reasons and uncertainty};
-\node[stage, fit=(synth),
-  label={[font=\bfseries]above:SYNTHESIS}] (synthesis-stage) {};
-\node[stage, fit=(prognosis),
-  label={[font=\bfseries]above:PROGNOSIS}] (prognosis-stage) {};
-
-% User and data inputs feed analysis; the recommendation returns to the renter.
-\draw[flow] (renter) -- (compare);
-\draw[flow] (interface.east) -| (constraints.west);
-\draw[flow] (dataset.east) -| (compare.west);
-\draw[flow] (management.east) -| (constraints.west);
-\draw[flow] (compare) -- (synth);
-\draw[flow] (constraints.east) -| (synth.south);
-\draw[flow] (synth) -- (prognosis);
-\draw[flow] (prognosis) -- (recommendation);
-\draw[flow] (recommendation.west) -| (interface.west);
-
-\end{tikzpicture}%
-}
-\caption{RentWise architecture mapped to the course's analysis, synthesis, and prognosis stages. Candidate methods are subject to validation.}
+\includegraphics[height=0.88\textheight,keepaspectratio]{figures/rentwise_architecture.png}
+\caption{Functional architecture of the RentWise IDSS prototype. The diagram
+maps data preparation, data-driven and knowledge-based analysis, synthesis,
+prognosis, and the renter's final action to the project design. The processed
+listings store is generated by the implemented cleaning pipeline; model and
+interface components are proposed.}
 \label{fig:idss-architecture}
 \end{figure}
 
 \section{Modules and Information Flow}
 
-The proposed prototype consists of the following modules, aligned with
-Figure~\ref{fig:idss-architecture}:
+The modules and their information flow, shown in
+Figure~\ref{fig:idss-architecture}, are:
 
 \begin{enumerate}
-  \item \textbf{User interface:} collects listing details and the renter's
-  budget and housing preferences, then displays estimates, checks, and
-  explanations.
-
-  \item \textbf{Data management and preprocessing:} loads rental records,
-  validates relevant fields, standardises units and categories, and
-  prepares location and listing attributes for comparison and modelling.
-
-  \item \textbf{Analysis modules:} the data-driven module retrieves
-  comparable records using characteristics such as location, size,
-  bedrooms, and bathrooms, derives the reference asking rent, with
-  candidate regression models as an additional estimate, and determines
-  the price position of the listing. The knowledge-based module measures
-  the satisfaction of the renter's criteria and checks non-negotiable
-  ones. The actual model and evaluation results must
-  be specified after the proposed methods have been tested.
-
-  \item \textbf{Synthesis module:} combines the weighted criteria,
-  potentially using a Weighted Sum Model, applies the veto of
-  non-negotiable criteria, and combines the resulting personal fit with
-  the price position to select the shortlist, review, or skip alternative.
-
-  \item \textbf{Prognosis and explanation module:} describes what the
-  renter risks with each possible action and the uncertainty behind the
-  recommendation, then presents the recommendation and supporting reasons. It does not
-  forecast landlord responses or application success.
-
-  \item \textbf{User interface:} presents the evidence and recommendation
-  so the renter can accept, refine, or reject the system's advice.
+  \item \textbf{Data preparation:} reads the source listings, selects
+  apartments, validates and cleans records, and produces the prepared listing
+  dataset.
+  \item \textbf{Renter input:} collects the listing under assessment and the
+  renter's preference targets, weights, and non-negotiable requirements.
+  \item \textbf{Analysis:} the data-driven component retrieves comparable
+  listings and assesses price position; the knowledge-based component checks
+  the budget, must-haves, and personal fit using the preference rules.
+  \item \textbf{Synthesis:} combines the price and fit assessments, applies
+  the non-negotiable veto, and selects Shortlist, Review, or Skip.
+  \item \textbf{Prognosis and output:} explains relevant consequences,
+  evidence, and uncertainty, then presents the result so that the renter can
+  pursue, ask about, or set aside the listing.
 \end{enumerate}
 
-Information flows from the renter's case and preferences, and from the
-historical dataset, into the analysis stage. The data-driven and
-knowledge-based analyses feed synthesis, which selects the recommended
-alternative. Prognosis describes the consequences and uncertainty of
-acting on it. The interface returns the recommendation and its evidence;
-the renter makes the final decision. The repository currently documents
-and implements data cleaning; the candidate recommendation models and
-Streamlit interface remain proposed components until implemented and
-evaluated.
+The distinction between implementation and design is important. The
+repository currently implements the data cleaning and feature-preparation
+pipeline. It documents KNN, regression, WSM, and Streamlit as candidate methods
+or tools, but does not yet contain a trained rent model, an implemented
+recommendation engine, or a user-facing application. Figure~\ref{fig:idss-architecture}
+therefore describes the target prototype architecture, not a claim that every
+module is operational.
 
 \section{Software Tools and Technologies}
 
-The repository uses Python 3.12 and the \texttt{uv} environment and
-dependency manager. The current cleaning pipeline uses Pandas and NumPy
-to prepare the UCI listing data. Scikit-learn is listed for candidate
-similarity and predictive modelling, while Streamlit is listed for the
-planned interface. These modelling and interface choices are proposals
-to be confirmed through implementation and evaluation; no final model
-algorithm or model performance is claimed in this chapter.
+The implemented preparation script uses Python with Pandas and NumPy; the
+project specifies Python 3.12 and uses \texttt{uv} to manage its environment.
+Scikit-learn is listed for candidate similarity search and predictive
+modelling, and Streamlit is listed for a possible web interface. These are
+repository-level tool selections, not evidence that a final model or interface
+has been implemented. Model choice, performance, and interface behaviour will
+be reported after implementation and evaluation.
 
 % ============================================================
 % 4. DATA PREPROCESSING
@@ -784,49 +714,150 @@ algorithm or model performance is claimed in this chapter.
 \label{ch:preprocessing}
 
 \section{Data Sources}
-[Describe each raw dataset or database: source, URL or access details, variables, number of records, time period, and license if relevant.]
+
+The project uses the 100K version of the UCI \emph{Apartment for Rent
+Classified} dataset (dataset ID 555) \cite{uci_apartment_dataset}. The raw CSV
+contains 100,000 rows and 22 fields. It describes US apartment advertisements
+posted between 7 December 2018 and 26 December 2019. The records include
+monthly asking rent, square footage, bedrooms, bathrooms, city and state,
+coordinates, amenities, pet-policy text, source, and listing time. The data
+are advertisements, not confirmed rental agreements. The dataset archive is
+downloaded by the cleaning script when the raw CSV is absent; the raw dataset
+itself is not committed to this repository. The repository contains the
+script and a generated raw-versus-clean summary so that preparation can be
+reproduced when the source data are available.
 
 \section{Data Understanding and Quality Assessment}
-[Describe the exploratory analysis and quality issues found, such as missing values, duplicates, outliers, inconsistent formats, class imbalance, or noisy records.]
+
+The source CSV is semicolon-separated, encoded in Windows-1252, and contains
+stray quotation marks in free-text fields. The loader therefore disables CSV
+quote handling and reads fields as text before converting numeric columns.
+Empty strings and the literal value \texttt{null} are normalised to missing
+values. The audit identified missing core measurements and location fields,
+possible duplicate advertisements and reposts, implausible rent or area
+values, and frequent absence of optional amenity and pet-policy information.
+
+Table~\ref{tab:cleaning-steps} reports the sequential row counts recorded by
+the repository's generated cleaning report. The listed categories are applied
+in order, so the removal counts are not independent. In total, 12,548 of the
+100,000 source rows were removed and 87,452 listings (87.45\%) were retained.
+
+\begin{table}[htbp]
+\centering
+\caption{Rows removed at each sequential cleaning step.}
+\label{tab:cleaning-steps}
+\small
+\begin{tabularx}{\textwidth}{Xrr}
+\toprule
+\textbf{Cleaning step} & \textbf{Removed} & \textbf{Remaining} \\
+\midrule
+Raw source file & 0 & 100,000 \\
+Exact duplicate rows & 84 & 99,916 \\
+Non-apartment listings & 61 & 99,855 \\
+Prices not quoted per month & 4 & 99,851 \\
+Missing price, area, bedrooms, or bathrooms & 185 & 99,666 \\
+Missing or placeholder location & 298 & 99,368 \\
+Price outside USD 300--10,000 per month & 79 & 99,289 \\
+Area outside 150--5,000 square feet & 23 & 99,266 \\
+Price per square foot outside USD 0.30--10.00 & 18 & 99,248 \\
+Reposts of the same listing & 11,796 & 87,452 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Other source-quality issues are handled according to what the fields mean.
+The address is omitted because it is missing in 92.06\% of raw records.
+Amenity fields are represented as zero when an amenity is not listed, with a
+separate \texttt{amenities\_listed} flag to distinguish an absent amenity
+list from a list that omits a specific amenity. Missing or contradictory pet
+policies remain unknown in nullable cat and dog fields; they are not treated
+as a prohibition. The source's central-US placeholder coordinates and records
+without usable city, state, and coordinates are excluded because location is
+needed for meaningful comparison. No non-USD records or impossible numeric
+values were found in this dataset version.
 
 \section{Pre-processing Pipeline}
-[Explain the operations applied, why they were needed, and the order in which they were performed.]
 
-\begin{figure}[H]
+Figure~\ref{fig:preprocessing} summarises the implemented workflow. The
+original file is read without modification. Exact duplicates are removed,
+then the data are restricted to apartment listings with monthly USD prices.
+Records missing price, square footage, bedroom count, bathroom count, or
+usable location are excluded. The script removes non-positive measurements,
+coordinates outside the selected US bounds, and state codes that are not two
+letters. It then applies fixed plausibility bounds: monthly price from USD
+300 to 10,000, area from 150 to 5,000 square feet, and price per square foot
+from USD 0.30 to 10.00. These bounds remove likely entry errors and extreme
+out-of-scope cases; they are script parameters, not learned model thresholds.
+
+Reposts are identified by equal price, area, bedroom and bathroom counts,
+city, state, coordinates, amenities, and source. The earliest advertisement
+is kept. This step reduces repeated advertisements from dominating a future
+comparable set and reduces the risk of reposts appearing on both sides of a
+future data split. The script then derives features and writes
+\texttt{dataset/processed/apartments\_clean.csv} and
+\texttt{dataset/processed/cleaning\_report.md}. Running the script regenerates
+both outputs; the cleaning report should not be edited by hand.
+
+\begin{figure}[htbp]
 \centering
-\begin{tikzpicture}[node distance=0.65cm and 0.55cm]
-  \node[process] (raw) {Raw data};
-  \node[process,right=of raw] (clean) {Cleaning};
-  \node[process,right=of clean] (transform) {Transformation\\and encoding};
-  \node[process,right=of transform] (split) {Train / test\\split};
-  \node[process,right=of split] (ready) {Prepared data};
-  \draw[arrow] (raw)--(clean);
-  \draw[arrow] (clean)--(transform);
-  \draw[arrow] (transform)--(split);
-  \draw[arrow] (split)--(ready);
+\begin{tikzpicture}[node distance=0.55cm and 0.45cm,>=Stealth]
+  \tikzset{
+    prepnode/.style={draw=linkblue,fill=blue!5,rounded corners=2pt,
+      text width=2.55cm,minimum height=0.9cm,align=center,font=\small},
+    prepline/.style={-{Stealth[length=2mm]},thick}
+  }
+  \node[prepnode] (raw) {Raw UCI CSV\\100,000 rows};
+  \node[prepnode,right=of raw] (filter) {Select apartments\\and monthly USD listings};
+  \node[prepnode,right=of filter] (validate) {Validate required fields\\and plausible values};
+  \node[prepnode,right=of validate] (dedup) {Remove exact duplicates\\and reposts};
+  \node[prepnode,right=of dedup] (features) {Derive features\\and write clean CSV};
+  \draw[prepline] (raw)--(filter);
+  \draw[prepline] (filter)--(validate);
+  \draw[prepline] (validate)--(dedup);
+  \draw[prepline] (dedup)--(features);
 \end{tikzpicture}
-\caption{Example data pre-processing pipeline. Adapt it to the actual workflow.}
+\caption{Implemented data-preparation workflow in \texttt{scripts/clean\_dataset.py}.}
 \label{fig:preprocessing}
 \end{figure}
 
 \section{Final Dataset}
-[Report the final dataset dimensions, selected features, target variable (if any), and any relevant changes after preprocessing.]
 
-\begin{table}[H]
+The processed dataset contains 87,452 rows and 45 columns. It retains listing
+identifiers and titles, asking rent, square footage, price per square foot,
+bedrooms, bathrooms, city, state, coordinates, source, listing time, fee and
+photo fields. It also contains nullable cat-allowed and dog-allowed fields,
+an amenity-list indicator, and 27 binary amenity features. Price per square
+foot is calculated as monthly price divided by square footage and rounded to
+three decimal places; the Unix listing time is converted to a UTC timestamp;
+and the fee field is converted to a boolean. Bedroom counts are stored as
+integers.
+
+Table~\ref{tab:datasets} summarises the source and prepared data. The
+processed file has no missing core comparison fields. The pet-policy fields
+remain nullable because an unstated policy is unknown. No target variable has
+been selected and no train/test split has been created: the repository
+currently prepares data but does not train or validate a predictive model.
+
+\begin{table}[htbp]
 \centering
-\caption{Summary of datasets before and after preprocessing.}
+\caption{Source and processed dataset summary.}
 \label{tab:datasets}
-\begin{tabularx}{\textwidth}{p{3cm} p{2cm} p{2cm} X}
+\begin{tabularx}{\textwidth}{p{3.0cm} p{2.0cm} p{2.0cm} X}
 \toprule
-\textbf{Dataset} & \textbf{Records} & \textbf{Features} & \textbf{Notes}\\
+\textbf{Dataset} & \textbf{Records} & \textbf{Columns} & \textbf{Notes} \\
 \midrule
-Raw & [N] & [N] & [Source / issues]\\
-Preprocessed & [N] & [N] & [Cleaning / transformations]\\
-Training & [N] & [N] & [Split details]\\
-Testing & [N] & [N] & [Split details]\\
+UCI raw 100K & 100,000 & 22 & US apartment advertisements; 2018--2019; USD asking rents. \\
+Prepared listings & 87,452 & 45 & Apartments with usable location and required measurements; duplicates and reposts removed; derived amenity, pet, time, and price-per-area fields. \\
 \bottomrule
 \end{tabularx}
 \end{table}
+
+The cleaned data remain historical and unevenly distributed across cities.
+They support comparisons within the coverage and time period of the source,
+not a current-market claim. Location coordinates are coarse in many cities,
+and some cities have few listings, so the future comparison component must
+report when local evidence is sparse. These limitations are carried into the
+architecture's uncertainty and Review outcome.
 
 % ============================================================
 % 5. DATA-DRIVEN MODELS
