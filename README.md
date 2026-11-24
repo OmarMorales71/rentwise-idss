@@ -41,6 +41,17 @@ rentwise-idss/
 │   └── 01_eda_preprocessing.ipynb   exploratory analysis of raw and clean data
 ├── scripts/
 │   └── clean_dataset.py   builds dataset/processed/ from dataset/raw/
+├── rentwise/              knowledge-based component (Task 6)
+│   ├── config.py          all tolerance bands and thresholds (initial values, tune in Task 7)
+│   ├── preferences.py     Listing and Preference data structures, criterion names
+│   ├── fit.py             satisfaction functions, Weighted Sum Model, veto
+│   ├── price.py           PriceAssessment / PriceAssessor interface + placeholder assessor
+│   ├── rules.py           recommendation rules R1–R4 and their reasons
+│   ├── assess.py          assess(listing, preferences, price_assessor) entry point
+│   └── data.py            loads the clean CSV with the right dtypes
+├── app/
+│   └── streamlit_app.py   Streamlit user interface (Task 8)
+├── tests/                 pytest tests of the knowledge-based component
 ├── report/
 ├── README.md
 ├── data_and_tools_selection.md
@@ -49,6 +60,33 @@ rentwise-idss/
 ```
 
 Keep `dataset/raw/` unchanged: do not clean, transform, rename or overwrite the original data. To rebuild the clean data, run `uv run python scripts/clean_dataset.py`.
+
+## Running the prototype
+
+```bash
+uv sync                                          # install dependencies
+uv run python scripts/clean_dataset.py           # only if dataset/processed/apartments_clean.csv is missing
+uv run streamlit run app/streamlit_app.py        # start the user interface
+uv run pytest                                    # run the tests
+```
+
+The app opens at http://localhost:8501. Pick an example preset in the sidebar (Shortlist, Review, Skip) or enter your own listing and preferences.
+
+From Python, the whole assessment is one call:
+
+```python
+from rentwise import assess, Listing, Preference, ComparablesPriceAssessor
+from rentwise.data import load_listings
+
+listing = Listing(price=1200, square_feet=950, bedrooms=2, bathrooms=2.0,
+                  cityname="Houston", state="TX", amenities={"amenity_parking"},
+                  cats_allowed=True, dogs_allowed=None)
+prefs = [Preference("budget", 1400, 0.8), Preference("dogs", weight=1.0)]
+result = assess(listing, prefs, ComparablesPriceAssessor(load_listings()))
+print(result.recommendation, result.reasons)
+```
+
+`ComparablesPriceAssessor` is a placeholder (median rent of similar listings in the same city or state). Task 5's model replaces it by implementing the `PriceAssessor` protocol in `rentwise/price.py`: a class with `assess(listing) -> PriceAssessment`.
 
 ## Proposed methods and tools
 

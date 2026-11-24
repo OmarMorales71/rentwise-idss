@@ -223,31 +223,105 @@ Example model evaluation results. Replace metrics with those appropriate to your
 
 # Model-driven IDSS Techniques
 
+The model-driven part of RentWise turns the renter's preferences and the price evidence into the Shortlist, Review, or Skip recommendation. It implements the personal-fit assessment and the recommendation described in the chapter *Main Identified Decisions*, and receives the price position from the data-driven component. All of its logic is contained in the Python package `rentwise`, and every numerical parameter is a named constant in `rentwise/config.py`. The values reported in this chapter are initial values chosen by the team; they have not been validated and are to be tuned during model validation.
+
 ## Knowledge-based Component
 
-\[Describe the expert knowledge, rules, ontology, constraints, or other knowledge representation used. Identify its source and how it was elicited or constructed.\]
+The knowledge represented in the component is of two kinds. The first is knowledge about the renter, elicited directly through the first decision: for each criterion that matters to them, the renter states a target value and a weight between 0 and 1, and a weight of 1.0 marks the criterion as non-negotiable. The criteria are limited to what the listings record: the monthly budget, the floor area, the numbers of bedrooms and bathrooms, the 27 amenities of the cleaned dataset (parking, pool, in-unit washer and dryer, and so on), and whether cats and dogs are allowed.
+
+The second kind is domain knowledge, built by the team from the decision objectives, from multi-criteria decision analysis, and from the properties of the data. It consists of three structures:
+
+- **Satisfaction functions** that express how far a listing satisfies each criterion, as a degree between 0 and 1. They encode the idea that a rent slightly above the budget, or a floor area slightly below the target, is a partial and not a complete failure.
+- **Rules for missing information.** A criterion that the listing does not state, such as an unstated pet policy or a missing amenity list, is *unverifiable*: it is neither counted as satisfied nor as failed, but excluded from the score and reported to the renter. This follows directly from the two failure modes of the system: counting it as failed would sacrifice opportunity preservation, and counting it as satisfied would hide a real risk to financial protection.
+- **Recommendation rules** that combine the personal fit, the veto of non-negotiable criteria, and the price position into a class, in the fixed order of precedence of the chapter *Main Identified Decisions*.
+
+The listing and the preferences are represented as two simple data structures, `Listing` and `Preference`, so that the user interface and the later integration of the system share a single vocabulary of criteria. The criterion names are those of the cleaned dataset, for example `amenity_washer_dryer`.
 
 ## Reasoning Mechanism
 
-\[Explain how the system applies the knowledge: rule-based inference, case-based reasoning, qualitative reasoning, simulation, or another technique.\]
+The component reasons in three steps, matching the analysis and synthesis stages of the architecture. They are invoked through a single function, `assess(listing, preferences, price_assessor)`, which returns the class, the rule that decided it, the reasons, and the underlying personal-fit and price assessments.
+
+**Evaluation of each criterion.** For every preference with a non-zero weight, the corresponding satisfaction function of Table "Satisfaction functions" is applied to the listing. The result is a degree *s<sub>i</sub>* in [0, 1], or *unknown* when the listing does not state the information.
+
+**Aggregation with the Weighted Sum Model.** Let *V* be the set of criteria whose satisfaction is known and *w<sub>i</sub>* their weights. The personal-fit score is the weighted mean
+
+*F* = Σ<sub>i∈V</sub> *w<sub>i</sub> s<sub>i</sub>* / Σ<sub>i∈V</sub> *w<sub>i</sub>*,
+
+so the weights are renormalised over the verifiable criteria only, and *F* remains between 0 and 1 whatever the number of unknown criteria. When no weighted criterion is verifiable, the score is undefined. Each criterion's contribution is kept, so that the explanation can name the criteria that lowered the score most. In parallel, the veto is checked: a non-negotiable criterion whose satisfaction is known and lower than 1 is a veto. A non-negotiable criterion whose satisfaction is unknown is not a veto; it is passed to the rules as an open question.
+
+**Rule-based classification.** The recommendation rules are evaluated in order, and the first rule whose condition holds determines the class. This forward, first-match inference makes the order of precedence explicit: a veto outweighs any price or fit evidence, firm negative evidence outweighs doubtful evidence, and a Shortlist is only issued when nothing calls for caution. Together with the class, the rules produce the explanation: the rule that fired and its conditions, the personal-fit score, the criteria that limited it with their degree of satisfaction, the criteria to ask the advertiser about, the gap between the asking rent and the reference, and the number of comparable listings behind it.
+
+The asymmetry of the rules reflects the cost of the two errors. Skip is reached only through firm evidence: a verified failure of a non-negotiable criterion, a clearly insufficient fit, or a clear price gap supported by enough comparable listings. Every uncertain case falls through to Review.
 
 ## Example Rules or Knowledge Structures
 
-<div id="tab:rules">
+The numerical criteria share the same shape: satisfaction is complete up to the target and decreases linearly to zero at the end of a tolerance band. The budget band is relative, because a gap of 100 USD matters more on a budget of 800 USD than on one of 3,000 USD; the floor-area band is relative for the same reason; the bedroom and bathroom bands are absolute, because these quantities take only a few discrete values.
 
-| **ID** | **Condition (IF)** | **Conclusion / action (THEN)** |
-|:-------|:-------------------|:-------------------------------|
-| R1     | \[Condition\]      | \[Conclusion\]                 |
-| R2     | \[Condition\]      | \[Conclusion\]                 |
-| R3     | \[Condition\]      | \[Conclusion\]                 |
+<div id="tab:satisfaction">
 
-Example knowledge rules. Replace with rules actually used in the prototype.
+| **Criterion** | **Satisfaction *s*** | **Parameter (initial value)** |
+|:--|:--|:--|
+| Budget | 1 if *x* ≤ *t*; 0 if *x* ≥ *t*(1+β); linear in between | β = 0.20 (`BUDGET_TOLERANCE`) |
+| Floor area | 1 if *x* ≥ *t*; 0 if *x* ≤ *t*(1−α); linear in between | α = 0.25 (`SQUARE_FEET_TOLERANCE`) |
+| Bedrooms | 1 if *x* ≥ *t*; 0 if *x* ≤ *t* − *b*; linear in between | *b* = 2 (`BEDROOMS_BAND`) |
+| Bathrooms | 1 if *x* ≥ *t*; 0 if *x* ≤ *t* − *b*; linear in between | *b* = 1 (`BATHROOMS_BAND`) |
+| Each amenity | 1 if listed, 0 if the amenity list omits it, unknown if the ad has no amenity list | — |
+| Cats, dogs | 1 if allowed, 0 if not allowed, unknown if no pet policy is stated | — |
+
+Satisfaction functions of the personal-fit assessment (*x*: value in the listing, *t*: renter's target). Parameter values are initial values, to be tuned during validation.
 
 </div>
 
+With these values, a rent 10% above the budget satisfies the budget to 0.5, a listing with one bedroom fewer than the target satisfies the bedroom criterion to 0.5, and a listing half a bathroom short satisfies the bathroom criterion to 0.5.
+
+The price-position bands are applied to the relative gap *g* = (*x* − *r*) / *r* between the asking rent *x* and the reference rent *r*.
+
+<div id="tab:parameters">
+
+| **Parameter** | **Value** | **Meaning** |
+|:--|:--|:--|
+| `NON_NEGOTIABLE_WEIGHT` | 1.0 | Weight that marks a criterion as non-negotiable. |
+| `FIT_VERY_LOW` | 0.40 | Below this score the personal fit is very low. |
+| `FIT_GOOD` | 0.70 | From this score the fit is good; between the two thresholds it is intermediate. |
+| `IN_LINE_BAND` | 0.10 | \|*g*\| ≤ 0.10: in line with the reference; *g* < −0.10: below it. |
+| `MODERATE_BAND` | 0.25 | 0.10 < *g* ≤ 0.25: moderately above; *g* > 0.25: significantly above. |
+| `MIN_COMPARABLES` | 10 | Minimum number of comparable listings for the evidence to be sufficient. |
+
+Thresholds of the recommendation rules (initial values, to be tuned during validation).
+
+</div>
+
+The rules are evaluated from R1 to R4 and the first one that applies is used.
+
+<div id="tab:rules">
+
+| **ID** | **Condition (IF)** | **Conclusion (THEN)** |
+|:-------|:-------------------|:----------------------|
+| R1 | A non-negotiable criterion is verifiable and *s* < 1 (veto) | Skip |
+| R2 | (the evidence is sufficient AND the position is significantly above the reference) OR *F* < `FIT_VERY_LOW` | Skip |
+| R3 | A non-negotiable criterion is unverifiable OR the evidence is insufficient OR the position is moderately above the reference OR *F* < `FIT_GOOD` OR *F* is undefined | Review |
+| R4 | Otherwise | Shortlist |
+
+Recommendation rules of the prototype, in order of precedence.
+
+</div>
+
+Two properties of the rule base follow from its order. First, an unverifiable non-negotiable criterion can never lead to Skip by itself, since R1 only applies to verifiable criteria; the listing reaches R3 and the explanation names the criterion to ask the advertiser about. Second, insufficient comparable evidence can never lead to a price-based Skip, since R2 requires sufficient evidence; in that case no price position is issued at all, and the listing is sent to Review by R3 unless R1 or a very low fit already applies. The case of an undefined score, when none of the weighted criteria can be verified, is not covered explicitly in the chapter *Main Identified Decisions*; it is treated as a doubtful case and sent to Review. Each rule branch, the satisfaction functions at the limits of their bands, and these two properties are covered by automated tests in the repository.
+
 ## Interaction with Data-driven Models
 
-\[Explain how the knowledge-based and data-driven components complement one another and contribute to the final decision support.\]
+The knowledge-based component does not estimate rents itself. It obtains the price position through a narrow interface, so that the data-driven model can be developed and replaced independently. Any object that provides a method `assess(listing)` returning a `PriceAssessment` can be used as price assessor. A `PriceAssessment` contains:
+
+- the reference asking rent, in 2019 USD per month;
+- the price position, one of *below*, *in line*, *moderately above*, or *significantly above*, or no position when the evidence is insufficient;
+- the number of comparable listings behind the reference, and whether the evidence is sufficient for a judgement;
+- the comparable listings themselves, which the interface shows to the renter as evidence.
+
+The position is computed from the reference with the shared bands above, so that every price assessor applies the same definition of in line and overpriced. Deciding whether the evidence is sufficient is the responsibility of the price assessor, because it is the component that knows how reliable its estimate is; the rules only act on the flag.
+
+Until the data-driven model is integrated, the prototype uses a simple placeholder assessor. It selects the historical listings with the same number of bedrooms, a number of bathrooms within 0.5, and a floor area within 25% of the listing, in the same city; when the city provides fewer than `MIN_COMPARABLES` such listings, the search is widened to the whole state, as a coarse form of the nearby areas mentioned in the chapter *Main Identified Decisions*. The reference rent is the median asking rent of the comparables. This placeholder is to be replaced by the K-nearest-neighbour retrieval and regression estimate of the data-driven chapter, without changes to the knowledge-based component.
+
+The two components therefore complement each other. The data-driven model answers the question that does not depend on the renter, namely how the asking rent compares with the market of the data, and reports how much evidence supports that answer. The knowledge-based component answers the question that depends on the renter, combines both answers with explicit rules, and turns the uncertainty reported by the model into a Review rather than an unsupported Skip.
 
 # Testing Use Cases
 
