@@ -403,8 +403,10 @@ estimate. This step is the main safeguard of opportunity preservation,
 since it prevents a listing from being skipped on weak evidence.
 
 \paragraph{Establishing a reference asking rent.} When the evidence is sufficient, the
-reference value is derived from the comparable listings and, if it proves
-reliable during validation, complemented by a regression estimate. The
+reference value is estimated by a regression model trained on the prepared
+listings, using the same attributes: location, floor area, bedrooms, and
+bathrooms. The comparable listings support this estimate as evidence and
+are shown to the renter. The
 reference is expressed in US dollars of 2018--2019 and describes historical asking
 rents, not current or negotiated prices.
 
@@ -654,10 +656,10 @@ A1 is the data-driven component. It retrieves the comparable listings with
 K-nearest neighbours (KNN) on location, floor area, bedrooms, and bathrooms,
 with location matched at city level because the coordinates in the data are
 coarse (\Cref{ch:preprocessing}). It then judges whether the comparable evidence is sufficient; if it
-is not, no price judgement is issued. Otherwise, it derives a reference
-asking rent from the comparable listings, complemented by a regression
-estimate if it proves reliable during validation, and places the asking rent below, in line with, moderately above,
-or significantly above the reference. Its outcome is the price position,
+is not, no price judgement is issued. Otherwise, a Ridge regression model
+on the logarithm of the asking rent, trained on the prepared listings,
+estimates the reference asking rent, and the asking rent is placed below,
+in line with, moderately above, or significantly above the reference. Its outcome is the price position,
 whether the evidence is sufficient, the reference asking rent, the gap, and
 the comparable listings used.
 
@@ -920,9 +922,10 @@ both outputs; the cleaning report should not be edited by hand.
 
 Each step serves one of the assessments of \Cref{ch:decisions}. Rows
 without price, area, bedrooms, bathrooms, or a usable location are removed
-because the price assessment (A1) selects comparable listings on these
-fields and uses their asking rents as evidence; estimating the missing
-values could match a listing with the wrong comparables. The plausibility
+because the price assessment (A1) trains its regression model and selects
+comparable listings on these fields; estimating the missing values would
+train the model on invented values and could match a listing with the
+wrong comparables. The plausibility
 bounds and the removal of reposts protect the reference asking rent of A1
 from data-entry errors and from copies of a single advertisement. Pet
 policies and amenity lists that the advertisement does not state are kept
@@ -950,7 +953,7 @@ counting them as unsatisfied.
   \draw[prepline] (validate)--(reposts);
   \draw[prepline] (reposts)--(features);
 \end{tikzpicture}
-\caption{Implemented data-preparation workflow in \texttt{scripts/clean\_dataset.py}.}
+\caption{Implemented data-preparation workflow.}
 \label{fig:preprocessing}
 \end{figure}
 
@@ -1004,6 +1007,36 @@ not a current-market claim. Location coordinates are coarse in many cities,
 and some cities have few listings, so the price assessment (A1) must
 report when local evidence is sparse. These limitations are carried into the
 architecture's uncertainty and Review outcome.
+
+\section{Modelling Dataset}
+\label{sec:modelling-dataset}
+
+The prepared listings are the training and evaluation data of the price
+assessment (A1). Its regression model predicts the logarithm of the monthly
+asking rent rather than the rent itself. The logarithm reduces the
+influence of the most expensive listings on the fit and makes the errors
+relative, which matches the way A1 expresses the gap between the asking
+rent and the reference: as a percentage.
+
+The inputs are the attributes that A1 compares, as stated in
+\Cref{ch:decisions}. The regression model uses the logarithm of the floor
+area and the numbers of bedrooms and bathrooms, standardised, together with
+the city and the state encoded as indicator variables. The comparable
+listings are retrieved on the standardised floor area, bedrooms, and
+bathrooms, among the listings of the same city, or of the same state when
+the city has fewer than ten listings. Amenities are not used as inputs:
+16.6\% of the listings give no amenity list, which a model would read as an
+apartment without amenities, and leaving them out barely changes the
+accuracy of the reference.
+
+The data are split by time. The training set contains the 80,311 listings
+posted before December 2019, and the test set the 7,141 listings posted in
+December 2019, the last collection period; 87.8\% of the test listings are
+in a city that also appears in the training set. A temporal split
+reproduces the use of the system, which assesses listings that are newer
+than its data. The standardisation and the encodings are computed on the
+training set only, and the removal of reposts during cleaning prevents
+copies of one advertisement from appearing in both sets.
 
 % ============================================================
 % 5. DATA-DRIVEN MODELS
