@@ -404,7 +404,7 @@ since it prevents a listing from being skipped on weak evidence.
 \paragraph{Establishing a reference asking rent.} When the evidence is sufficient, the
 reference value is derived from the comparable listings and, if it proves
 reliable during validation, complemented by a regression estimate. The
-reference is expressed in 2019 US dollars and describes historical asking
+reference is expressed in US dollars of 2018--2019 and describes historical asking
 rents, not current or negotiated prices.
 
 \paragraph{Positioning the asking rent.} The asking rent is placed relative to the
@@ -574,11 +574,11 @@ while the choice of what to do with the apartment remains with the renter.
 \section{System Actors and User Roles}
 
 RentWise supports a prospective renter who is assessing an apartment listing.
-The renter supplies the listing information and personal requirements, reviews
-the evidence and recommendation, and retains control of the housing decision.
-A second role maintains the data and prototype. This is a technical role; the
-system does not introduce a separate administrator or a market decision-maker.
-Table~\ref{tab:actors} summarizes the users and their functions.
+The renter takes the two decisions of \Cref{ch:decisions}: specifying the
+preferences (D1) and acting on the listing (D2). A second role maintains the
+data and the knowledge of the system. This is a technical role; the system
+does not introduce a separate administrator or a market decision-maker.
+Table~\ref{tab:actors} summarises the actors and their functions.
 
 \begin{table}[htbp]
 \centering
@@ -589,134 +589,234 @@ Table~\ref{tab:actors} summarizes the users and their functions.
 \textbf{Actor} & \textbf{Responsibilities} & \textbf{System functionalities} \\
 \midrule
 Renter / decision-maker &
-Enters a listing and sets requirements for budget, size, bedrooms, amenities,
-and pet policy. Each requirement has an importance weight; a weight of 1.0
-marks a non-negotiable requirement. The renter reviews the result and makes
-the final decision. &
-Views comparable listings and the reference asking-rent estimate, the price
-position, personal fit, failed or unverifiable non-negotiable requirements,
-uncertainty, and an explained Shortlist, Review, or Skip recommendation. \\
+Specifies the preferences (D1): a target value and a weight for budget,
+floor area, bedrooms, bathrooms, amenities, and pet policy, where a weight of
+1.0 marks a non-negotiable criterion. Enters the listing to assess. Acts on
+the listing (D2): pursues it, asks the advertiser for missing information,
+sets it aside, or overrides the recommendation, and may revise the
+preferences at any point. &
+Views the price position with the reference asking rent, the gap, and the
+comparable listings used; the personal-fit score with the criteria that
+limited it; any veto and the criteria that could not be verified; the
+Shortlist, Review, or Skip recommendation with its reasons; and the expected
+consequences of each option. \\
 \addlinespace
 Project / data maintainer &
-Maintains the data-preparation workflow and the prototype's candidate models
-and decision rules. &
-Runs the cleaning pipeline, checks data quality and coverage, evaluates
-candidate methods, and updates the prototype as its design is validated. \\
+Maintains the data-preparation workflow, the price model, and the knowledge
+base. &
+Runs the cleaning pipeline, checks data quality and coverage, and updates
+the parameters and rules of the system after validation. \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 \section{General Architecture}
 
-The architecture follows the course's cognitive-oriented IDSS sequence of
-\emph{analysis}, \emph{synthesis}, and \emph{prognosis}. Data preparation
-provides validated historical listings for analysis. The renter supplies a
-listing and preferences. The analysis stage estimates the listing's price
-position from comparable advertisements and checks how well the listing meets
-the renter's requirements. Synthesis combines those assessments into a
-recommendation. Prognosis explains the consequences and uncertainty associated
-with the decision. The recommendation and its evidence return to the renter,
-who makes the final choice.
+The architecture follows the cognitive-oriented IDSS sequence of
+\emph{analysis}, \emph{synthesis}, and \emph{prognosis}, preceded by the
+preparation of the data and the input of the renter, and followed by the
+renter's decision. Figure~\ref{fig:idss-architecture} shows its six
+stages:
 
-The data source is the UCI \emph{Apartment for Rent Classified} 100K dataset.
-It contains US advertisements from 2018--2019, including asking rent, area,
-bedrooms, bathrooms, location, amenities, and listing time. The data and the
-implemented cleaning workflow are described in Chapter~\ref{ch:preprocessing}.
-Consequently, any price comparison is a reference to historical US asking
-rents in USD; it is not an estimate of current rents, final transaction
-prices, or rents in another country \cite{uci_apartment_dataset}.
+\begin{enumerate}[leftmargin=*]
+  \item Data preparation turns the source advertisements into the prepared
+  listings, which are the comparable evidence of the system.
+  \item Renter input collects the apartment listing under assessment and the
+  renter's preferences (D1) through the user interface.
+  \item Analysis computes the price position of the listing (A1) and its
+  personal fit (A2), independently of each other.
+  \item Synthesis combines the outcomes of A1 and A2 into a recommendation
+  (A3).
+  \item Prognosis describes the expected consequences of each option open to
+  the renter.
+  \item The renter acts on the listing (D2).
+\end{enumerate}
 
-\paragraph{Data preparation.} The repository's Python script selects
-apartment listings, validates required fields and location, applies stated
-plausibility limits, removes duplicate advertisements and reposts, and writes
-a processed CSV while leaving the raw data unchanged. The resulting file is the
-listing store shown in Figure~\ref{fig:idss-architecture}. The project has
-implemented this preparation component; the decision models and user interface
-shown in the architecture remain planned components.
+The prepared listings are historical advertisements posted in the United
+States between December 2018 and December 2019, described in
+\Cref{ch:preprocessing}. Every price comparison is therefore a reference to
+historical asking rents in USD, not an estimate of current rents or of
+final agreed rents \cite{uci_apartment_dataset}.
 
-\paragraph{Analysis.} The data-driven component is designed to retrieve
-comparable listings using attributes such as location, area, bedrooms, and
-bathrooms. Their asking rents provide evidence for a reference rent and the
-listing's price position. K-nearest neighbours (KNN) is a candidate method;
-regression is also considered as an additional estimator. In parallel, a
-knowledge-based component evaluates the renter's weighted requirements and
-checks non-negotiable criteria. The Weighted Sum Model (WSM) and explicit veto
-rules are proposed for this assessment. Missing information is treated as
-unknown: an unverifiable non-negotiable requirement leads to Review rather
-than being counted as a failure. KNN, regression, WSM, and their thresholds
-must be evaluated before they can be reported as final methods.
+\paragraph{Data preparation.} The cleaning pipeline selects apartment
+listings, validates the required fields and the location, applies
+plausibility limits, removes duplicate advertisements and reposts, and
+writes the prepared listings while leaving the raw data unchanged.
 
-\paragraph{Synthesis.} Synthesis combines the price position with personal
-fit and applies the non-negotiable veto. It selects Shortlist, Review, or Skip
-and attaches the evidence and reasons. A listing is shortlisted when its fit
-and price are supported by sufficient evidence and no non-negotiable criterion
-fails. Limited comparables, intermediate assessments, or important missing
-details lead to Review. A failed non-negotiable requirement or clearly poor
-value with sufficient comparables can lead to Skip.
+\paragraph{Analysis.} The two assessments of the analysis stage use
+different sources. The price position (A1) uses the listing and the
+prepared listings, but not the renter's preferences. The personal fit (A2)
+uses the listing and the preferences, but not the prepared listings.
 
-\paragraph{Prognosis and renter action.} Prognosis relates the recommendation
-to the project's three decision objectives: U1 financial protection, U2
-opportunity preservation, and U3 search effort. It also communicates
-uncertainty from sparse comparisons, unstated listing details, and the
-historical data. This stage explains possible consequences; it does not
-predict landlord responses, application success, or the final negotiated
-rent. The renter may pursue the listing, ask for more information, or set it
-aside.
+A1 is the data-driven component. It retrieves the comparable listings with
+K-nearest neighbours (KNN) on location, floor area, bedrooms, and bathrooms,
+with location matched at city level because the coordinates in the data are
+coarse. It then judges whether the comparable evidence is sufficient; if it
+is not, no price judgement is issued. Otherwise, it derives a reference
+asking rent from the comparable listings, complemented by a regression
+estimate if it proves reliable during validation, and places the asking rent below, in line with, moderately above,
+or significantly above the reference. Its outcome is the price position,
+whether the evidence is sufficient, the reference asking rent, the gap, and
+the comparable listings used.
+
+A2 is the knowledge-based component. It assigns each criterion a degree of
+satisfaction between 0 and 1, excludes from the score the criteria that the
+listing does not state, and combines the remaining ones into a personal-fit
+score with a Weighted Sum Model (WSM). The score is read as very low,
+intermediate, or good. A verifiable non-negotiable criterion that is not
+fully satisfied is a veto; a non-negotiable criterion that the listing does
+not state is reported as unverified. Its outcome is the personal-fit score,
+any veto, the criteria that limited the score, and the criteria that could
+not be verified.
+
+\paragraph{Knowledge base.} The knowledge used by A2 and A3 is kept apart
+from the data, in a knowledge base. It contains the satisfaction function
+of each criterion with its tolerance band, the definition of the veto, the
+thresholds that separate very low, intermediate, and good personal fit, and
+the recommendation rules. The decision logic of the knowledge base, namely
+the veto, the treatment of unknown information, and the order of the
+rules, is derived from the objectives and decisions of
+\Cref{ch:domain,ch:decisions}. The methods follow standard multi-criteria
+decision analysis: value functions that measure the partial satisfaction
+of each criterion \cite{keeney_raiffa_1976}, a weighted sum that combines
+them \cite{triantaphyllou_2000}, and a veto on non-negotiable criteria, as
+in the veto thresholds of the ELECTRE methods \cite{roy_1991}. The
+numerical parameters are initial values set by the team and tuned during
+validation (\Cref{ch:validation}). The content of the knowledge base is
+described in \Cref{ch:modeldriven}. A1 does not use the knowledge base, since the price
+position is derived from the data.
+
+\paragraph{Synthesis.} The recommendation (A3) uses only the outcomes of A1
+and A2, without returning to the listing or the data, and applies the
+recommendation rules in a fixed order of precedence:
+
+\begin{enumerate}[leftmargin=*]
+  \item If A2 reports a veto, the listing is classified as Skip.
+  \item If the asking rent is significantly above the reference and the
+  comparable evidence is sufficient, or if the personal fit is very low,
+  the listing is classified as Skip.
+  \item If a non-negotiable criterion cannot be verified, the comparable
+  evidence is insufficient, the asking rent is moderately above the
+  reference, or the personal fit is intermediate, the listing is classified
+  as Review.
+  \item Otherwise, the listing is classified as Shortlist.
+\end{enumerate}
+
+Together with the class, A3 selects the reasons to present: the criteria
+that limited the score or could not be verified, the comparable listings
+used, the gap between the asking rent and the reference, and the amount of
+evidence behind the price judgement.
+
+\paragraph{Prognosis.} Prognosis describes, before the renter acts, the
+expected consequences of each option of D2 in terms of the three utilities
+of \Cref{ch:decisions}: financial protection (U1), opportunity preservation
+(U2), and search effort (U3). For a listing in Review because the pet policy
+is not stated, for example, pursuing it without asking risks a wasted
+viewing (U3) and an unsuitable apartment (U1), setting it aside risks
+losing a suitable one (U2), and asking the advertiser costs little effort
+and resolves the doubt. These consequences are stated qualitatively, not
+computed as numerical utilities. Prognosis also reports the uncertainty
+behind them: sparse comparable evidence, details the listing does not
+state, the historical nature of the data, and the quality of the apartment,
+which neither the listing nor the data describe. It does not predict
+landlord responses, application success, or the final agreed rent.
+
+\paragraph{Renter's action.} The renter receives the recommendation, its
+reasons, and the expected consequences, and decides what to do with the
+listing (D2): pursue it, ask the advertiser for missing information and
+assess the listing again, or set it aside. The renter may also revise the
+preferences, which returns the process to D1.
 
 \begin{figure}[p]
 \centering
-\colorbox{black}{%
-    \includegraphics[
-        width=0.95\textwidth,
-        height=0.85\textheight,
-        keepaspectratio
-    ]{figures/new_diagrampng.png}%
-}
-\caption{Functional architecture of the RentWise IDSS prototype. The diagram
-maps data preparation, data-driven and knowledge-based analysis, synthesis,
-prognosis, and the renter's final action to the project design. The processed
-listings store is generated by the implemented cleaning pipeline; model and
-interface components are proposed.}\label{fig:idss-architecture}
+\includegraphics[
+    width=0.95\textwidth,
+    height=0.85\textheight,
+    keepaspectratio
+]{figures/rentwise_architecture.png}
+\caption{Functional architecture of the RentWise IDSS prototype.}
+\label{fig:idss-architecture}
 \end{figure}
 
 \section{Modules and Information Flow}
 
-The modules and their information flow, shown in
-Figure~\ref{fig:idss-architecture}, are:
+Table~\ref{tab:modules} lists the modules of
+Figure~\ref{fig:idss-architecture}, the decision or assessment of
+\Cref{ch:decisions} that each one implements, and the information it
+receives and delivers.
 
-\begin{enumerate}
-  \item \textbf{Data preparation:} reads the source listings, selects
-  apartments, validates and cleans records, and produces the prepared listing
-  dataset.
-  \item \textbf{Renter input:} collects the listing under assessment and the
-  renter's preference targets, weights, and non-negotiable requirements.
-  \item \textbf{Analysis:} the data-driven component retrieves comparable
-  listings and assesses price position; the knowledge-based component checks
-  the budget, must-haves, and personal fit using the preference rules.
-  \item \textbf{Synthesis:} combines the price and fit assessments, applies
-  the non-negotiable veto, and selects Shortlist, Review, or Skip.
-  \item \textbf{Prognosis and output:} explains relevant consequences,
-  evidence, and uncertainty, then presents the result so that the renter can
-  pursue, ask about, or set aside the listing.
-\end{enumerate}
+\begin{table}[htbp]
+\centering
+\small
+\caption{Modules of the RentWise IDSS and their information flow.}
+\label{tab:modules}
+\begin{tabularx}{\textwidth}{p{2.9cm} p{0.6cm} X X}
+\toprule
+\textbf{Module} & \textbf{ID} & \textbf{Receives} & \textbf{Delivers}\\
+\midrule
+Data preparation & -- &
+Raw advertisements &
+Prepared listings\\
+\addlinespace
+Renter input & D1 &
+Listing details and preferences from the renter &
+Apartment listing; target value and weight per criterion\\
+\addlinespace
+Price position & A1 &
+Apartment listing; prepared listings &
+Price position or no judgement; evidence sufficiency; reference asking
+rent, gap, and comparable listings used\\
+\addlinespace
+Personal fit & A2 &
+Apartment listing; preferences; knowledge base &
+Personal-fit score; veto; criteria that limited the score; criteria that
+could not be verified\\
+\addlinespace
+Recommendation & A3 &
+Outcomes of A1 and A2; knowledge base &
+Shortlist, Review, or Skip, with reasons\\
+\addlinespace
+Prognosis & -- &
+Recommendation and its reasons &
+Expected consequences of each option for U1, U2, and U3; uncertainty\\
+\addlinespace
+Renter's action & D2 &
+Recommendation, reasons, and expected consequences &
+Pursue, ask and assess again, set aside, or revise D1\\
+\bottomrule
+\end{tabularx}
+\end{table}
 
-The distinction between implementation and design is important. The
-repository currently implements the data cleaning and feature-preparation
-pipeline. It documents KNN, regression, WSM, and Streamlit as candidate methods
-or tools, but does not yet contain a trained rent model, an implemented
-recommendation engine, or a user-facing application. Figure~\ref{fig:idss-architecture}
-therefore describes the target prototype architecture, not a claim that every
-module is operational.
+\section{User Interface}
+
+The renter interacts with the IDSS through a web interface, where both
+decisions take place. It is organised in three parts.
+
+\paragraph{Preferences.} A form where the renter specifies D1: for each
+criterion, a target value and a weight between 0 and 1, with a weight of
+1.0 marking the criterion as non-negotiable. The preferences can be
+revised at any time.
+
+\paragraph{Listing.} A form where the renter enters the listing to assess:
+asking rent, city and state, floor area, bedrooms, bathrooms, amenities,
+and pet policy. Details that the advertisement does not state can be left
+empty, so that they are treated as unknown rather than as missing
+features.
+
+\paragraph{Assessment.} The result of the assessment. It shows the
+recommendation and the reasons behind it; the price position, with the
+reference asking rent, the gap, and the comparable listings used, or a
+notice that the evidence is insufficient; the personal fit, with the degree
+of satisfaction of each criterion, the criteria that limited the score, and
+the criteria to ask the advertiser about; and the expected consequences of
+pursuing, asking about, or setting aside the listing.
 
 \section{Software Tools and Technologies}
 
-The implemented preparation script uses Python with Pandas and NumPy; the
-project specifies Python 3.12 and uses \texttt{uv} to manage its environment.
-Scikit-learn is listed for candidate similarity search and predictive
-modelling, and Streamlit is listed for a possible web interface. These are
-repository-level tool selections, not evidence that a final model or interface
-has been implemented. Model choice, performance, and interface behaviour will
-be reported after implementation and evaluation.
+The system is written in Python 3.12, with its environment managed by
+\texttt{uv}. Pandas and NumPy are used to prepare the data, Scikit-learn
+to retrieve the comparable listings and to fit the regression estimate, and
+Streamlit to build the web interface.
 
 % ============================================================
 % 4. DATA PREPROCESSING
@@ -1427,6 +1527,21 @@ UCI Machine Learning Repository.
 doi: \href{https://doi.org/10.24432/C5X623}{10.24432/C5X623}.
 Available at:
 \url{https://archive.ics.uci.edu/dataset/555/apartment}.
+
+\bibitem{keeney_raiffa_1976}
+R.~L. Keeney and H.~Raiffa.
+\textit{Decisions with Multiple Objectives: Preferences and Value
+Tradeoffs}. John Wiley \& Sons, New York, 1976.
+
+\bibitem{roy_1991}
+B.~Roy.
+The outranking approach and the foundations of ELECTRE methods.
+\textit{Theory and Decision}, 31(1):49--73, 1991.
+
+\bibitem{triantaphyllou_2000}
+E.~Triantaphyllou.
+\textit{Multi-Criteria Decision Making Methods: A Comparative Study}.
+Kluwer Academic Publishers, Dordrecht, 2000.
 
 \end{thebibliography}
 
