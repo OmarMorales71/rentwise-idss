@@ -299,7 +299,7 @@ Four variables are treated as uncertain. The current market, meaning
 the apartments available for rent and their asking rents at the time of
 the search, determines which listings the renter can find, and therefore
 the apartment listing that reaches the IDSS. The IDSS cannot observe it,
-because its data describe the market of 2019. The apartment listing is
+because its data describe the market of 2018--2019. The apartment listing is
 uncertain for a second reason as well: advertisements are incomplete and
 often omit information such as the pet policy or the list of amenities.
 The comparable evidence available in the historical data varies
@@ -365,7 +365,8 @@ shortfall on it can be offset by strengths on other criteria. A renter with
 a budget of 2,000 USD and a weight of 0.7 accepts that a listing slightly
 above that amount may still be worth pursuing if it performs well on the
 remaining criteria. A weight of 1.0 has a special meaning: it marks the
-criterion as non-negotiable. A renter with a dog, for example, can declare
+criterion as non-negotiable. A non-negotiable criterion admits no tolerance:
+any shortfall on it, however small, is a veto. A renter with a dog, for example, can declare
 that the pet policy must allow dogs, and no combination of amenities will
 compensate for a listing that does not.
 
@@ -426,9 +427,9 @@ within the stated amount and decreases gradually as the rent exceeds it,
 reaching zero at the end of a tolerance band. Floor area, bedrooms, and
 bathrooms are treated in the same way: a listing slightly below the target
 satisfies the criterion partially, while one far below it does not satisfy
-it at all. Amenities and pet policy are satisfied or not. The width of the
-tolerance bands is a parameter of the system, described in
-\Cref{ch:modeldriven}.
+it at all. Amenities and pet policy are satisfied or not. The tolerance
+bands apply only to criteria with a weight below 1, and their width is a
+parameter of the system, described in \Cref{ch:modeldriven}.
 
 \paragraph{Handling information the listing does not state.} Missing
 information is frequent: 55\% of the cleaned listings do not state a pet
@@ -440,22 +441,25 @@ the score and named in the explanation, so that the renter knows what to
 ask the advertiser.
 
 \paragraph{Combining the criteria.} The degrees of satisfaction of the
-verifiable criteria are combined into a personal-fit score using the
-renter's weights; the proposed method is a Weighted Sum Model. Non-negotiable
-criteria are checked separately and act as a veto: if one of them is not
-satisfied, the listing cannot be recommended, whatever its score. The
-result of this step is the personal-fit score, together with any veto and
-the list of criteria that could not be verified.
+verifiable criteria are combined into a personal-fit score through a
+Weighted Sum Model: the weighted mean of their degrees of satisfaction,
+computed over the verifiable criteria only. The score is read as very low,
+intermediate, or good according to two thresholds, which are parameters of
+the system. Non-negotiable criteria are checked separately: a verifiable
+non-negotiable criterion that is not fully satisfied is a veto, whatever
+the score. A non-negotiable criterion that the listing does not state is
+not a veto; it is reported as unverified. The result of this step is the
+personal-fit score, any veto, the criteria that limited the score, and the
+criteria that could not be verified.
 
 \section{Recommendation}
 
-The IDSS combines the price position and the personal fit into one of the
-three classes defined in Table~\ref{tab:recommendation-classes}. The
+The recommendation uses only the outcomes of A1 and A2, without returning
+to the listing or the data, and combines them into one of the three classes defined in Table~\ref{tab:recommendation-classes}. The
 combination follows a fixed order of precedence:
 
 \begin{enumerate}[leftmargin=*]
-  \item If a non-negotiable criterion is not satisfied, the listing is
-  classified as Skip.
+  \item If A2 reports a veto, the listing is classified as Skip.
   \item If the asking rent is significantly above the reference value and
   the comparable evidence is sufficient, or if the personal-fit score is
   very low, the listing is classified as Skip.
@@ -533,12 +537,14 @@ A1 & Price position & IDSS &
 Location, floor area, bedrooms, bathrooms, and asking rent of the listing;
 comparable historical listings &
 Below, in line, moderately above, or significantly above the reference; no
-judgement if evidence is insufficient\\
+judgement if evidence is insufficient; reference asking rent, gap, and
+comparable listings used\\
 \addlinespace
 A2 & Personal fit & IDSS &
 Listing attributes; preferences from D1 &
-Personal-fit score; veto if a non-negotiable criterion fails; criteria
-that could not be verified\\
+Personal-fit score; veto if a non-negotiable criterion is not fully
+satisfied; criteria that limited the score; criteria that could not be
+verified\\
 \addlinespace
 A3 & Recommendation & IDSS &
 Outcomes of A1 and A2 &
@@ -550,9 +556,10 @@ Shortlist, Review, or Skip, with reasons\\
 The decisions and assessments match the nodes of
 Figure~\ref{fig:influence-diagram}: D1 and D2 are its decision nodes, and
 A1, A2, and A3 its deterministic nodes. They also follow the stages of the
-architecture presented in \Cref{ch:architecture}. A1 and the satisfaction
-of each criterion in A2 belong to the analysis stage; the combination of
-the criteria in A2 and the recommendation A3 belong to synthesis; and
+architecture presented in \Cref{ch:architecture}. A1 and A2 belong to the
+analysis stage, where the price and the personal fit of the listing are
+assessed independently; A3 belongs to synthesis, where their outcomes are
+combined into a recommendation; and
 prognosis describes what the renter risks with each option of D2, in terms
 of the three utilities. D1 and D2 take place through the user interface.
 In every case, the IDSS supplies evidence and a reasoned recommendation,
