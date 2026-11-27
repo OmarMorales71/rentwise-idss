@@ -390,12 +390,13 @@ involves four steps.
 \paragraph{Selecting the comparable listings.} The IDSS selects the historical
 listings that are most similar to the one under assessment, using location,
 floor area, bedrooms, and bathrooms. Because the coordinates in the data
-are coarse, often a single point per city, location is in practice matched
+are coarse, often a single point per city (\Cref{ch:preprocessing}), location is in practice matched
 at city level, with nearby areas considered when the city alone provides
 too few listings.
 
 \paragraph{Judging whether the evidence is sufficient.} Coverage of the data is uneven:
-half of the cities in the cleaned dataset have three listings or fewer.
+half of the cities in the cleaned dataset have three listings or fewer
+(\Cref{ch:preprocessing}).
 When the comparable set is too small or too dissimilar, the IDSS withholds
 the price judgement and reports the lack of evidence instead of issuing an
 estimate. This step is the main safeguard of opportunity preservation,
@@ -433,7 +434,8 @@ parameter of the system, described in \Cref{ch:modeldriven}.
 
 \paragraph{Handling information the listing does not state.} Missing
 information is frequent: 55\% of the cleaned listings do not state a pet
-policy, and 17\% do not include an amenity list. Counting a missing item as
+policy, and 17\% do not include an amenity list (\Cref{ch:preprocessing}).
+Counting a missing item as
 unsatisfied would penalise listings for what the advertisement omits, which
 contradicts opportunity preservation; counting it as satisfied would hide a
 real risk. A criterion that cannot be verified is therefore excluded from
@@ -651,7 +653,7 @@ uses the listing and the preferences, but not the prepared listings.
 A1 is the data-driven component. It retrieves the comparable listings with
 K-nearest neighbours (KNN) on location, floor area, bedrooms, and bathrooms,
 with location matched at city level because the coordinates in the data are
-coarse. It then judges whether the comparable evidence is sufficient; if it
+coarse (\Cref{ch:preprocessing}). It then judges whether the comparable evidence is sufficient; if it
 is not, no price judgement is issued. Otherwise, it derives a reference
 asking rent from the comparable listings, complemented by a regression
 estimate if it proves reliable during validation, and places the asking rent below, in line with, moderately above,
@@ -866,8 +868,10 @@ Raw source file & 0 & 100,000 \\
 Exact duplicate rows & 84 & 99,916 \\
 Non-apartment listings & 61 & 99,855 \\
 Prices not quoted per month & 4 & 99,851 \\
+Currency other than USD & 0 & 99,851 \\
 Missing price, area, bedrooms, or bathrooms & 185 & 99,666 \\
 Missing or placeholder location & 298 & 99,368 \\
+Impossible values (non-positive numbers, coordinates outside the US) & 0 & 99,368 \\
 Price outside USD 300--10,000 per month & 79 & 99,289 \\
 Area outside 150--5,000 square feet & 23 & 99,266 \\
 Price per square foot outside USD 0.30--10.00 & 18 & 99,248 \\
@@ -893,39 +897,58 @@ Figure~\ref{fig:preprocessing} summarises the implemented workflow. The
 original file is read without modification. Exact duplicates are removed,
 then the data are restricted to apartment listings with monthly USD prices.
 Records missing price, square footage, bedroom count, bathroom count, or
-usable location are excluded. The script removes non-positive measurements,
-coordinates outside the selected US bounds, and state codes that are not two
-letters. It then applies fixed plausibility bounds: monthly price from USD
+usable location are excluded. The script removes non-positive prices, areas,
+and bathroom counts, negative bedroom counts (a count of 0 denotes a
+studio), coordinates outside the selected US bounds, and state codes that
+are not two letters. It then applies fixed plausibility bounds: monthly price from USD
 300 to 10,000, area from 150 to 5,000 square feet, and price per square foot
-from USD 0.30 to 10.00. These bounds remove likely entry errors and extreme
-out-of-scope cases; they are script parameters, not learned model thresholds.
+from USD 0.30 to 10.00. The bounds are fixed round values just beyond the
+0.1 and 99.9 percentiles of the raw data (USD 400 and 9,000 for price, 250
+and 3,888 square feet for area, and USD 0.40 and 7.22 for price per square
+foot), so they remove data-entry errors, such as a two-bedroom apartment at
+USD 100 per month, and out-of-scope luxury units while keeping 99.9\% of the
+listings. They are parameters of the script, not learned model thresholds.
 
 Reposts are identified by equal price, area, bedroom and bathroom counts,
 city, state, coordinates, amenities, and source. The earliest advertisement
-is kept. This step reduces repeated advertisements from dominating a future
-comparable set and reduces the risk of reposts appearing on both sides of a
-future data split. The script then derives features and writes
-\texttt{dataset/processed/apartments\_clean.csv} and
-\texttt{dataset/processed/cleaning\_report.md}. Running the script regenerates
+is kept. This step prevents copies of one advertisement from filling the
+comparable set of the price assessment (A1), and prevents reposts from
+appearing in both the training and the test data. The script then derives
+features and writes \nolinkurl{dataset/processed/apartments_clean.csv} and
+\nolinkurl{dataset/processed/cleaning_report.md}. Running the script regenerates
 both outputs; the cleaning report should not be edited by hand.
+
+Each step serves one of the assessments of \Cref{ch:decisions}. Rows
+without price, area, bedrooms, bathrooms, or a usable location are removed
+because the price assessment (A1) selects comparable listings on these
+fields and uses their asking rents as evidence; estimating the missing
+values could match a listing with the wrong comparables. The plausibility
+bounds and the removal of reposts protect the reference asking rent of A1
+from data-entry errors and from copies of a single advertisement. Pet
+policies and amenity lists that the advertisement does not state are kept
+as unknown rather than as absent, because the personal-fit assessment (A2)
+excludes criteria that cannot be verified from the score instead of
+counting them as unsatisfied.
 
 \begin{figure}[htbp]
 \centering
-\begin{tikzpicture}[node distance=0.55cm and 0.45cm,>=Stealth]
+\begin{tikzpicture}[node distance=0.75cm and 0.7cm,>=Stealth]
   \tikzset{
     prepnode/.style={draw=linkblue,fill=blue!5,rounded corners=2pt,
-      text width=2.55cm,minimum height=0.9cm,align=center,font=\small},
+      text width=3.4cm,minimum height=0.9cm,align=center,font=\small},
     prepline/.style={-{Stealth[length=2mm]},thick}
   }
   \node[prepnode] (raw) {Raw UCI CSV\\100,000 rows};
-  \node[prepnode,right=of raw] (filter) {Select apartments\\and monthly USD listings};
-  \node[prepnode,right=of filter] (validate) {Validate required fields\\and plausible values};
-  \node[prepnode,right=of validate] (dedup) {Remove exact duplicates\\and reposts};
-  \node[prepnode,right=of dedup] (features) {Derive features\\and write clean CSV};
-  \draw[prepline] (raw)--(filter);
-  \draw[prepline] (filter)--(validate);
-  \draw[prepline] (validate)--(dedup);
-  \draw[prepline] (dedup)--(features);
+  \node[prepnode,right=of raw] (dedup) {Remove exact\\duplicates};
+  \node[prepnode,right=of dedup] (filter) {Select apartments\\and monthly USD listings};
+  \node[prepnode,below=of raw] (validate) {Validate required fields,\\location, and plausible values};
+  \node[prepnode,right=of validate] (reposts) {Remove reposts};
+  \node[prepnode,right=of reposts] (features) {Derive features\\and write clean CSV};
+  \draw[prepline] (raw)--(dedup);
+  \draw[prepline] (dedup)--(filter);
+  \draw[prepline] (filter.south) -- ++(0,-0.3) -| (validate.north);
+  \draw[prepline] (validate)--(reposts);
+  \draw[prepline] (reposts)--(features);
 \end{tikzpicture}
 \caption{Implemented data-preparation workflow in \texttt{scripts/clean\_dataset.py}.}
 \label{fig:preprocessing}
@@ -945,9 +968,7 @@ integers.
 
 Table~\ref{tab:datasets} summarises the source and prepared data. The
 processed file has no missing core comparison fields. The pet-policy fields
-remain nullable because an unstated policy is unknown. No target variable has
-been selected and no train/test split has been created: the repository
-currently prepares data but does not train or validate a predictive model.
+remain nullable because an unstated policy is unknown.
 
 \begin{table}[htbp]
 \centering
@@ -963,10 +984,24 @@ Prepared listings & 87,452 & 45 & Apartments with usable location and required m
 \end{tabularx}
 \end{table}
 
+The coverage of the prepared listings is uneven. They describe 3,541
+cities in 51 state codes, but half of the cities have three listings or
+fewer, while the largest, Dallas (Texas), has 2,404. Location is also
+coarse: 62\% of the cities with two or more listings have a single pair of
+coordinates for all of them, so distances between listings mostly measure
+distances between cities rather than between neighbourhoods. Optional
+listing details are often absent: 55.1\% of the listings (48,165 of 87,452)
+do not state a pet policy, and 16.6\% do not include an amenity list.
+Finally, the listings are concentrated in time and source: 98.3\% of them
+were posted in four collection periods (December 2018, February 2019,
+September 2019, and December 2019), and 90.5\% come from a single portal,
+RentDigs.com. The comparable evidence therefore reflects the asking rents
+of one portal in a few months, not the whole rental market of the period.
+
 The cleaned data remain historical and unevenly distributed across cities.
 They support comparisons within the coverage and time period of the source,
 not a current-market claim. Location coordinates are coarse in many cities,
-and some cities have few listings, so the future comparison component must
+and some cities have few listings, so the price assessment (A1) must
 report when local evidence is sparse. These limitations are carried into the
 architecture's uncertainty and Review outcome.
 

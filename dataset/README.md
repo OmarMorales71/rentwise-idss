@@ -55,7 +55,7 @@ Main numeric columns:
 |---|---|---|---|---|---|---|
 | `price` (USD per month) | 300 | 1,035 | 1,379 | 1,547 | 1,830 | 10,000 |
 | `square_feet` | 150 | 730 | 903 | 961 | 1,124 | 4,970 |
-| `price_per_sqft` | 0.32 | 1.14 | 1.49 | 1.71 | 2.04 | 9.99 |
+| `price_per_sqft` | 0.32 | 1.13 | 1.49 | 1.71 | 2.04 | 9.99 |
 | `bedrooms` | 0 | 1 | 2 | 1.73 | 2 | 9 |
 | `bathrooms` | 1 | 1 | 1 | 1.45 | 2 | 7 |
 
@@ -205,8 +205,8 @@ Clean file:
 
 ## Known limitations of the clean data
 
-- Coordinates are coarse. Half of the cities have a single latitude and longitude for all their listings, so distance between listings mostly measures distance between cities, not between neighbourhoods.
-- Coverage per city is uneven. Half of the 3,541 cities have 3 listings or fewer; the largest has 2,408.
+- Coordinates are coarse. 62% of the cities with two or more listings have a single latitude and longitude for all their listings, so distance between listings mostly measures distance between cities, not between neighbourhoods.
+- Coverage per city is uneven. Half of the 3,541 cities have 3 listings or fewer; the largest, Dallas (TX), has 2,404.
 - Listings are concentrated in four collection periods: December 2018, February 2019, September 2019 and December 2019.
 - One source, RentDigs.com, provides 91% of the raw rows.
 - Prices are asking rents from 2018 and 2019, not current or agreed rents.
