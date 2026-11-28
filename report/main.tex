@@ -1227,9 +1227,8 @@ assessment. The first condition fails when even the state has fewer than ten
 listings; the second when the listing is unusual for its area, for instance
 a five-bedroom apartment in a city where almost all listings have one or
 two bedrooms. The threshold $d_{\max}$ is a parameter of the system,
-calibrated in \Cref{ch:validation} from the relationship between the mean
-distance of the comparables and the error of the reference on the
-validation period.
+calibrated in \Cref{ch:validation} from the distribution of the mean
+distance of the comparables on the validation period.
 
 When the evidence is insufficient, A1 issues no price position, even though
 Ridge can produce a reference for any listing. The comparable listings that
@@ -1257,7 +1256,7 @@ posted before September 2019; the validation period, 36,546 listings.}
 \textbf{Error on the validation period}\\
 \midrule
 Ridge & Nine values of $\alpha$, from 0.01 to 100 & $\alpha = 1$ &
-MAE 343 USD; MAPE 20.2\% (22.2\% with $\alpha = 100$)\\
+MAE 343 USD; MAPE 20.1\% (22.2\% with $\alpha = 100$)\\
 \addlinespace
 KNN & $k \in \{5, 10, 20\}$ & $k = 10$ &
 MAPE of the median of the neighbours: 23.7\%, 23.1\%, and 22.8\%\\
@@ -1266,7 +1265,7 @@ MAPE of the median of the neighbours: 23.7\%, 23.1\%, and 22.8\%\\
 \end{table}
 
 The error of Ridge changes little for values of $\alpha$ between 0.01 and 3,
-with a MAPE between 20.2\% and 20.4\%, and grows for larger values, which
+with a MAPE between 20.1\% and 20.4\%, and grows for larger values, which
 pull the coefficients of the cities towards zero and lose the differences in
 rent between them. The value $\alpha = 1$ gives the lowest error. The error
 on the validation period is higher than on the test set, partly
@@ -1374,17 +1373,405 @@ only when the evidence is sufficient.}
 \chapter{Data Post-processing and Model Validation}
 \label{ch:validation}
 
+This chapter describes how the outputs of the price models are turned into
+information for the renter, how the models and the parameters of the system
+are validated, and what the results mean for the decisions of
+\Cref{ch:decisions}. Every number reported here is produced by the
+validation scripts of the repository, which use the same code as the user
+interface.
+
 \section{Post-processing}
-[Describe how model outputs are transformed into useful information for users, including ranking, thresholds, aggregation, formatting, or explanation.]
+\label{sec:postprocessing}
+
+The models of \Cref{ch:datadriven} do not produce, by themselves, a
+judgement that the renter can use. Ridge predicts the logarithm of a rent,
+and KNN returns a list of row positions and distances. Post-processing turns
+them into the outcome of the price assessment (A1) in four steps.
+
+\paragraph{Reference asking rent.} The prediction of Ridge is transformed
+back to US dollars with \Cref{eq:reference}. The standardisation and the
+encodings applied to the listing are those computed on the data the model
+was fitted on, and are stored with the model, so that a new listing is
+transformed exactly as the training listings were.
+
+\paragraph{Evidence check.} The number of comparable listings and their mean
+distance are compared with $k$ and $d_{\max}$ (\Cref{eq:sufficiency}). When
+the evidence is insufficient, the price position is withheld. The reference
+is still shown, explicitly marked as indicative, together with the reason
+why no judgement is made: too few comparable listings, or comparable
+listings that are too different from the listing.
+
+\paragraph{Gap and price position.} The gap of \Cref{eq:gap} is expressed as
+a percentage and mapped to a price position by the bands of
+\Cref{eq:bands}. The bands are calibrated in \Cref{sec:results-bands}.
+
+\paragraph{Explanation.} The outcome is formatted for the interface as a
+short statement, for example ``asking 1,750 USD is 12\% above the reference
+1,560 USD (in line with the reference), from 10 comparable listings'',
+followed by the table of comparable listings, ordered from the
+closest to the furthest, with their asking rent, floor area, bedrooms,
+bathrooms, and distance. The interface states that the reference is
+estimated from all prepared listings, so the renter does not expect it to
+equal the median of the listings shown. The recommendation (A3) adds the rule
+that decided the class and the reasons behind it, as described in
+\Cref{ch:modeldriven}.
 
 \section{Validation Strategy}
-[Describe the validation design, test data, baselines, metrics, and safeguards against data leakage.]
+\label{sec:validation-strategy}
+
+\subsection{Data Periods}
+
+The validation follows the temporal split of \Cref{sec:modelling-dataset} and
+the division of the training set described in
+\Cref{sec:training-procedure}. Table~\ref{tab:periods} summarises the four
+sets and their use.
+
+\begin{table}[H]
+\centering
+\caption{Data periods used for model selection, calibration, and testing.}
+\label{tab:periods}
+\begin{tabularx}{\textwidth}{p{2.4cm} p{3.6cm} r X}
+\toprule
+\textbf{Set} & \textbf{Listings posted} & \textbf{Listings} & \textbf{Use}\\
+\midrule
+Fitting set & before September 2019 & 43,765 &
+Fitting the models with which hyperparameters and parameters are chosen\\
+\addlinespace
+Validation & September--November 2019 & 36,546 &
+Every choice: $\alpha$, $k$, $d_{\max}$, the price bands, and the
+knowledge-based parameters\\
+\addlinespace
+Training set & before December 2019 & 80,311 &
+Fitting the final models evaluated on the test set\\
+\addlinespace
+Test set & December 2019 & 7,141 &
+Final evaluation, performed once; no choice is made on it\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Four safeguards prevent information from the evaluation data from reaching
+the models. The splits are temporal, so every model is evaluated on listings
+newer than those it was fitted on. The standardisation, the encodings, and
+the city averages used by the comparison models are computed on the data the
+model is fitted on. Reposts of the same advertisement were removed during
+cleaning (\Cref{ch:preprocessing}), so that copies of one listing cannot
+appear on both sides of a split. Finally, the parameters are chosen on the
+validation period and frozen before the test set is read.
+
+\subsection{Baselines and Metrics}
+
+The reference of Ridge is compared with four alternatives:
+
+\begin{itemize}[leftmargin=*]
+  \item a naive baseline: the median asking rent of the training listings in
+  the same city with the same number of bedrooms, falling back to the city
+  and then to the state;
+  \item KNN used as an estimator: the median asking rent of the $k$
+  comparable listings of \Cref{sec:knn}, which was the reference of an
+  earlier design of the system;
+  \item Ridge with the 27 amenity indicators as additional inputs;
+  \item a Random Forest of 200 trees with at least three listings per leaf,
+  trained on the logarithm of the rent with the floor area, bedrooms,
+  bathrooms, coordinates, state, amenities, and the mean logarithm of the
+  rent of the city, computed on the training listings only. It represents a
+  non-linear model able to capture interactions that Ridge cannot.
+\end{itemize}
+
+The accuracy of a reference is measured on each test listing by the
+absolute error in US dollars and the absolute percentage error with respect
+to the asking rent, summarised by their mean (MAE and MAPE) and by the
+median absolute percentage error (MdAPE), and by the share of listings
+whose asking rent lies within 10\% and 25\% of the reference. The
+percentage errors match the way A1 reads the gap. The median of the signed
+gap of \Cref{eq:gap} measures the bias of the reference over time. For the
+system as a whole, the validation reports the share of listings with
+sufficient evidence, the distribution of the price positions, and the
+distribution of the recommendations.
+
+\subsection{Calibration Criteria}
+\label{sec:calibration-criteria}
+
+Three groups of parameters are fixed on the validation period, with the
+price models fitted on the fitting set.
+
+\paragraph{Maximum mean distance.} The threshold $d_{\max}$ is the 95th
+percentile of the mean distance $\bar{d}$ of the comparable listings,
+rounded up to two decimals. A cut-off where the error of the reference starts
+to grow would have been an alternative, but \Cref{sec:results-evidence} shows
+that the error does not grow with the distance in a way that supports one.
+The threshold is therefore defined by what the system usually observes: a
+listing is too unusual for its area when its comparables are further away
+than in 95\% of the cases.
+
+\paragraph{Price bands.} The band $b_1$ is the 50th percentile and $b_2$ the
+90th percentile of the absolute gap, over the validation listings with
+sufficient evidence. A listing is in line with the reference when it
+deviates from it less than the typical listing does, and significantly above
+it when it deviates more than nine listings out of ten. The second band is
+deliberately demanding, because a significantly-above position can cause a
+Skip, and an unjustified Skip damages opportunity preservation (U2).
+
+\paragraph{Knowledge-based parameters.} The tolerances of the satisfaction
+functions and the two personal-fit thresholds of \Cref{ch:modeldriven}
+cannot be fitted to data, because no listing has a known correct
+recommendation. They are validated through the behaviour of the system,
+with a one-at-a-time sensitivity analysis on 10,000 validation listings,
+each assessed by one simulated renter. Each parameter takes five values
+around its initial one, and a value is accepted if it meets two conditions
+derived from \Cref{ch:domain}:
+
+\begin{enumerate}[leftmargin=*]
+  \item at most 50\% of the assessments end in Review, so that the system
+  saves the renter effort rather than returning most cases to them (U3);
+  \item moving the parameter to an adjacent value changes the class of at
+  most 10\% of the assessments, so that the recommendation does not depend
+  critically on the exact value chosen by the team.
+\end{enumerate}
+
+The initial value is kept if it meets both conditions; otherwise the closest
+value that meets them is selected.
+
+The simulated renters are a fixed and reproducible population, not a sample
+of real renters. Each renter searches in the city of the listing they assess
+and wants the bedrooms of the listing, one fewer, or one more. Their budget
+is the typical local rent for those bedrooms multiplied by a factor between
+0.85 and 1.25, and their target floor area is the local median for those
+bedrooms multiplied by a factor between 0.85 and 1.15. Their weights are drawn
+between 0.2 and 0.9, with the budget non-negotiable for one renter in four
+and the bedrooms for about one in seven. About one renter in three asks for
+each of five common amenities, one in five requires dogs to be allowed, and
+one in ten requires cats. Local values are taken from the listings that the
+system knows. The population is wide enough to exercise every criterion and
+every recommendation rule.
 
 \section{Validation Results}
-[Present the validation results and interpret them in relation to the intended decisions.]
+\label{sec:validation-results}
+
+\subsection{Accuracy of the Reference Asking Rent}
+
+Table~\ref{tab:test-comparison} compares the models on the test set. Ridge
+gives the most accurate reference: its MAE is 271 USD and its MAPE 17.9\%,
+against 347 USD and 23.2\% for the median of the ten comparable listings and
+396 USD and 26.7\% for the naive baseline. The Random Forest, despite its
+additional inputs, is less accurate than Ridge (MAPE 19.1\%), and adding the
+amenities to Ridge lowers its MAPE by only 0.3 percentage points. These
+results support the design of \Cref{ch:datadriven}: the reference comes
+from Ridge without amenities, and the comparable listings serve as evidence
+rather than as the estimate.
+
+\begin{table}[H]
+\centering
+\caption{Accuracy of the reference asking rent on the test set (December
+2019, 7,141 listings). KNN excludes the 0.3\% of listings with fewer than ten
+listings in their state. The last two columns give the share of listings
+whose asking rent lies within 10\% and 25\% of the reference.}
+\label{tab:test-comparison}
+\small
+\begin{tabularx}{\textwidth}{X r r r r r}
+\toprule
+\textbf{Model} & \textbf{MAE (USD)} & \textbf{MAPE} & \textbf{MdAPE} &
+\textbf{$\pm$10\%} & \textbf{$\pm$25\%}\\
+\midrule
+Naive: city median, same bedrooms & 396 & 26.7\% & 19.9\% & 28.8\% & 59.2\%\\
+KNN: median of 10 comparables & 347 & 23.2\% & 17.3\% & 32.0\% & 65.7\%\\
+Random Forest & 292 & 19.1\% & 14.5\% & 37.3\% & 72.7\%\\
+Ridge with amenities & 270 & 17.6\% & 14.0\% & 36.9\% & 75.8\%\\
+Ridge without amenities (system) & 271 & 17.9\% & 14.2\% & 37.2\% & 74.8\%\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The accuracy depends on where the comparable evidence is found. For the
+68.4\% of test listings whose city has at least ten listings, the MAPE of
+Ridge is 17.2\%; for the 31.6\% whose comparables come from the state, it is
+19.6\%. KNN used as an estimator degrades much more in the second case, from
+21.0\% to 28.2\%, which confirms that a few listings from other cities of the
+state are a weak reference on their own. Even for Ridge, half of the test
+listings deviate from the reference by more than 14\%: the attributes in the
+data explain the asking rent only in part, and the reference is a market
+benchmark, not a valuation of the apartment.
+
+\subsection{Evidence Sufficiency and the Maximum Mean Distance}
+\label{sec:results-evidence}
+
+On the validation period, 98.3\% of the listings find ten comparable
+listings. The error of the reference does not grow steadily with their mean
+distance: by decile of $\bar{d}$, the MAPE of Ridge ranges from 16.6\% in the
+closest decile to 23.0\% in the seventh, and is 20.3\% in the furthest one.
+No distance marks a point beyond which the reference becomes unreliable, and
+the threshold is therefore set by the percentile criterion of
+\Cref{sec:calibration-criteria}: $d_{\max} = 1.69$, which leaves 4.9\% of
+the validation listings without a price judgement.
+
+On the test set, 86.8\% of the listings have sufficient evidence. Of the
+rest, 0.3\% have fewer than ten comparable listings and 12.9\% have
+comparables that are too far away. The second share is larger than on the
+validation period because the listings of December 2019 include more large
+apartments in cities whose training listings are mostly small: the listings
+set aside by the criterion have a median of three bedrooms and 1,459 square
+feet, against one bedroom and 766 square feet for the test set as a whole.
+The threshold is not adjusted, since no choice is made on the test set.
+
+The criterion separates listings that are unusual for their area, but not
+listings with a much worse reference: the MAPE of Ridge is 17.8\% with
+sufficient evidence and 18.7\% without it. Its contribution is therefore to
+the explainability of the judgement, which is only issued when the comparable
+listings shown to the renter resemble the apartment, rather than to its
+accuracy.
+
+\subsection{Price Bands}
+\label{sec:results-bands}
+
+Table~\ref{tab:gap-percentiles} shows the distribution of the absolute gap
+on the 34,162 validation listings with sufficient evidence. The calibrated
+bands are $b_1 = 0.16$ and $b_2 = 0.49$: a listing is in line with the
+reference if its asking rent is within 16\% of it, and significantly above
+it if it is more than 49\% above.
+
+\begin{table}[H]
+\centering
+\caption{Percentiles of the absolute gap between asking rent and reference
+on the validation period (listings with sufficient evidence).}
+\label{tab:gap-percentiles}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Percentile} & P25 & P50 & P75 & P90 & P95\\
+\midrule
+Absolute gap & 7.4\% & 16.4\% & 30.1\% & 48.8\% & 67.4\%\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:positions} compares the price positions produced by the
+initial bands set by the team, $\pm$10\% and +25\%, with those produced by
+the calibrated bands. The initial bands placed only a third of the
+validation listings in line with their reference and almost a quarter
+significantly above it, so that many ordinary listings would have been
+skipped as overpriced. With the calibrated bands, about half are in line
+and fewer than one in ten significantly above. On the test set, without
+any adjustment, the shares are close to those targeted on the validation
+period.
+
+\begin{table}[H]
+\centering
+\caption{Price positions of the listings with sufficient evidence.}
+\label{tab:positions}
+\small
+\begin{tabularx}{\textwidth}{X r r r r}
+\toprule
+\textbf{Bands and period} & \textbf{Below} & \textbf{In line} &
+\textbf{Mod.\ above} & \textbf{Sig.\ above}\\
+\midrule
+Initial ($\pm$10\%, +25\%), validation & 26.0\% & 33.0\% & 17.2\% & 23.9\%\\
+Calibrated ($\pm$16\%, +49\%), validation & 17.7\% & 49.0\% & 23.7\% & 9.7\%\\
+Calibrated ($\pm$16\%, +49\%), test & 15.8\% & 54.9\% & 22.5\% & 6.7\%\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Knowledge-based Parameters}
+
+With all parameters at their initial values, 47.7\% of the simulated
+assessments on the validation period end in Review, which meets the first
+condition. Table~\ref{tab:sensitivity} summarises the sensitivity analysis.
+Every initial value meets both conditions, so all of them are kept. The
+tolerances of the satisfaction functions have little influence: moving any
+of them to an adjacent value changes the class of at most 1.6\% of the
+assessments. The two personal-fit thresholds matter more, because they
+decide directly between Shortlist, Review, and Skip. Raising the threshold
+of a good fit from 0.70 to 0.80 would send 56.8\% of the assessments to
+Review, breaking the first condition, while lowering it to 0.60 would
+shortlist 34.1\% of them on a weaker fit.
+
+\begin{table}[H]
+\centering
+\caption{Sensitivity of the recommendations to the knowledge-based
+parameters (validation period, 10,000 simulated assessments). The last
+column is the largest share of assessments whose class changes when the
+parameter moves from its initial value to an adjacent one.}
+\label{tab:sensitivity}
+\small
+\begin{tabularx}{\textwidth}{X c c c c}
+\toprule
+\textbf{Parameter} & \textbf{Values tested} & \textbf{Initial} &
+\textbf{Review range} & \textbf{Class change}\\
+\midrule
+Budget tolerance & 0.10--0.30 & 0.20 & 47.5--47.9\% & 0.5\%\\
+Floor-area tolerance & 0.15--0.35 & 0.25 & 47.1--48.2\% & 1.0\%\\
+Bedrooms band & 1.0--3.0 & 2.0 & 46.1--47.7\% & 1.6\%\\
+Bathrooms band & 0.50--1.50 & 1.0 & 47.4--47.8\% & 1.6\%\\
+Very-low fit threshold & 0.30--0.50 & 0.40 & 41.4--50.4\% & 2.8\%\\
+Good fit threshold & 0.60--0.80 & 0.70 & 39.4--56.8\% & 4.5\%\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+On the test set, with the final parameters, the simulated renters receive a
+Shortlist in 28.7\% of the assessments, a Review in 41.8\%, and a Skip in
+29.5\%. Skips come mostly from failed non-negotiable criteria (rule R1,
+22.2\% of the assessments) and less from a significantly-above price or a
+very low fit (rule R2, 7.3\%). Insufficient price evidence contributes 9.5\%
+of the assessments to Review. These shares describe the simulated
+population, not the decisions of real renters, but they show that the
+system separates listings into the three classes rather than deferring most
+of them to the renter.
+
+\subsection{Temporal Drift}
+
+All models under-estimate the asking rents of December 2019. The median
+signed gap between the asking rent and the Ridge reference is +3.7\% on the
+test set and +4.2\% on the validation period, and the comparison models show
+the same tendency. The reference is built from older listings, and the gap is
+consistent with asking rents that rose over the period covered by the data. The calibrated bands absorb
+part of this drift, because they are derived from gaps that already contain
+it, but a reference built from historical data will always lag behind a
+rising market.
 
 \section{Limitations and Reliability}
-[Discuss uncertainty, bias, generalizability, data limitations, and cases where recommendations should be reviewed by a human.]
+\label{sec:limitations}
+
+The validation supports the use of the price assessment as a screening tool,
+within the following limits.
+
+\paragraph{The reference is a historical benchmark.} It describes the asking
+rents of one portal, mostly in four collection periods of 2018 and 2019
+(\Cref{ch:preprocessing}), and under-estimates the most recent rents by
+about 4\%. It cannot be read as a current market price or as the rent that
+would be agreed.
+
+\paragraph{The price judgement is coarse.} Half of the asking rents deviate
+from the reference by more than 14\%, because floor area, bedrooms,
+bathrooms, and location leave much of the asking rent unexplained. The wide
+bands are a direct consequence: the system distinguishes clearly overpriced
+listings from ordinary ones, but not small differences in value.
+
+\paragraph{The evidence is weaker outside large cities.} Almost a third of
+the test listings take their comparables from the state, where the reference
+is less accurate. The criterion of maximum distance flags unusual listings,
+but does not identify listings with a much worse reference, and the share it
+flags depends on the composition of the period assessed.
+
+\paragraph{The knowledge-based parameters are validated for stability, not
+for correctness.} Without real renters and known correct recommendations,
+the analysis shows only that the recommendations are not dominated by Review
+and do not depend critically on the exact values of the parameters. The
+simulated renters are a documented assumption, the two conditions are
+choices of the team derived from the objectives of \Cref{ch:domain}, and
+the one-at-a-time analysis does not capture interactions between
+parameters. Validating the recommendations with real renters is left for
+future work (\Cref{ch:future}).
+
+\paragraph{One temporal split.} The models are selected on one validation
+period and tested on one month. The hyperparameters of the Random Forest
+were not tuned, so its comparison with Ridge is indicative.
+
+These limits are the reason why the recommendation remains a support to the
+renter's decision (\Cref{ch:decisions}). A renter should look closer at a
+listing in Review, at any listing whose price judgement is based on
+comparables from the state, and at any listing in a market that has
+changed since 2019, and may override a Skip for reasons that the data does
+not capture, such as the condition of the building or the neighbourhood.
 
 % ============================================================
 % 7. MODEL-DRIVEN TECHNIQUES

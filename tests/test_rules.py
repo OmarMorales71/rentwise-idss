@@ -112,11 +112,13 @@ def test_reasons_report_gap_and_comparables():
 
 # --- Price position and Ridge + KNN assessor ----------------------------------
 
-@pytest.mark.parametrize("asking, expected", [
-    (850, "below"), (900, "in_line"), (1100, "in_line"),
-    (1200, "moderately_above"), (1250, "moderately_above"), (1300, "significantly_above"),
+@pytest.mark.parametrize("gap, expected", [
+    (lambda b1, b2: -b1 - 0.01, "below"), (lambda b1, b2: -b1, "in_line"),
+    (lambda b1, b2: b1, "in_line"), (lambda b1, b2: b1 + 0.01, "moderately_above"),
+    (lambda b1, b2: b2, "moderately_above"), (lambda b1, b2: b2 + 0.01, "significantly_above"),
 ])
-def test_price_position_bands(asking, expected):
+def test_price_position_bands(gap, expected):
+    asking = 1000 * (1 + gap(config.IN_LINE_BAND, config.MODERATE_BAND))
     assert price_position(asking, 1000) == expected
 
 
@@ -188,3 +190,23 @@ def test_ridge_reference_tracks_local_rents():
     austin = assessor.reference_rent(listing())
     dallas = assessor.reference_rent(listing(cityname="Dallas"))
     assert 1200 < dallas < austin < 1700
+
+
+def test_assess_frame_matches_assess():
+    """The validation scripts (assess_frame) and the UI (assess) run the same A1."""
+    history = _history(config.MIN_COMPARABLES + 2, config.MIN_COMPARABLES)
+    assessor = RidgeKnnPriceAssessor(history)
+    listings = [listing(), listing(cityname="Dallas", price=2000),
+                listing(square_feet=3000, bedrooms=5, bathrooms=3.0),
+                listing(cityname="Miami", state="FL")]
+    frame = pd.DataFrame([dict(price=x.price, square_feet=x.square_feet, bedrooms=x.bedrooms,
+                               bathrooms=x.bathrooms, cityname=x.cityname, state=x.state)
+                          for x in listings])
+    batch = assessor.assess_frame(frame)
+    for x, row in zip(listings, batch.itertuples()):
+        single = assessor.assess(x)
+        assert single.reference_rent == pytest.approx(row.reference)
+        assert single.n_comparables == row.n_comparables
+        assert single.level == row.level
+        assert single.evidence_sufficient == row.evidence_sufficient
+        assert single.position == row.position

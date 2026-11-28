@@ -12,8 +12,9 @@ from rentwise.preferences import Listing, Preference
 
 
 def budget_satisfaction(price: float, budget: float,
-                        tolerance: float = config.BUDGET_TOLERANCE) -> float:
+                        tolerance: float | None = None) -> float:
     """1 if price <= budget, then linear down to 0 at budget * (1 + tolerance)."""
+    tolerance = config.BUDGET_TOLERANCE if tolerance is None else tolerance
     if price <= budget:
         return 1.0
     limit = budget * (1 + tolerance)
@@ -33,17 +34,20 @@ def at_least_satisfaction(value: float, target: float, band: float) -> float:
 
 
 def square_feet_satisfaction(square_feet: float, target: float,
-                             tolerance: float = config.SQUARE_FEET_TOLERANCE) -> float:
+                             tolerance: float | None = None) -> float:
+    tolerance = config.SQUARE_FEET_TOLERANCE if tolerance is None else tolerance
     return at_least_satisfaction(square_feet, target, band=target * tolerance)
 
 
 def bedrooms_satisfaction(bedrooms: float, target: float,
-                          band: float = config.BEDROOMS_BAND) -> float:
+                          band: float | None = None) -> float:
+    band = config.BEDROOMS_BAND if band is None else band
     return at_least_satisfaction(bedrooms, target, band)
 
 
 def bathrooms_satisfaction(bathrooms: float, target: float,
-                           band: float = config.BATHROOMS_BAND) -> float:
+                           band: float | None = None) -> float:
+    band = config.BATHROOMS_BAND if band is None else band
     return at_least_satisfaction(bathrooms, target, band)
 
 

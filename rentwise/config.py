@@ -1,15 +1,16 @@
 """System parameters of the IDSS.
 
 Every number that shapes a recommendation lives here, so that the values can be
-found, discussed and tuned in one place. Unless a comment says it was selected
-in validation, a value is an INITIAL VALUE chosen by the team from common sense
-and the dataset summary in dataset/README.md; validation (report, Chapter 6)
-tunes them.
+found, discussed and tuned in one place. All of them were checked or selected on
+the validation period (September-November 2019): see results/calibration.md,
+results/price_model_comparison.md and the criteria in report/validation_criteria.md.
 """
 
 # ---------------------------------------------------------------------------
 # Satisfaction functions (personal fit)
 # ---------------------------------------------------------------------------
+# Initial values set by the team, kept after the sensitivity analysis of
+# scripts/calibrate_parameters.py (results/calibration.md, section 3).
 
 # Budget: satisfaction is 1 when the rent is within the budget and falls
 # linearly to 0 when the rent reaches budget * (1 + BUDGET_TOLERANCE).
@@ -41,8 +42,10 @@ NON_NEGOTIABLE_WEIGHT = 1.0
 #   -IN_LINE_BAND <= gap <= IN_LINE_BAND     -> in_line
 #   IN_LINE_BAND < gap <= MODERATE_BAND      -> moderately_above
 #   gap > MODERATE_BAND                      -> significantly_above
-IN_LINE_BAND = 0.10
-MODERATE_BAND = 0.25
+# Calibrated on the validation period: IN_LINE_BAND = 50th percentile and
+# MODERATE_BAND = 90th percentile of the absolute gap (results/calibration.md, section 2).
+IN_LINE_BAND = 0.16
+MODERATE_BAND = 0.49
 
 # ---------------------------------------------------------------------------
 # Price assessment models (report, Chapter 5)
@@ -61,12 +64,15 @@ MIN_COMPARABLES = 10
 
 # Evidence is sufficient when KNN finds KNN_K comparables AND their mean
 # standardised distance (floor area, bedrooms, bathrooms) to the listing is at
-# most this value. INITIAL VALUE: to be calibrated in validation (Chapter 6).
-MAX_MEAN_DISTANCE = 1.5
+# most this value. Calibrated on the validation period as the 95th percentile of
+# the mean distance (results/calibration.md, section 1).
+MAX_MEAN_DISTANCE = 1.69
 
 # ---------------------------------------------------------------------------
 # Recommendation thresholds on the personal-fit score (0..1)
 # ---------------------------------------------------------------------------
+# Initial values set by the team, kept after the sensitivity analysis
+# (results/calibration.md, section 3).
 
 # fit < FIT_VERY_LOW                    -> very low fit (Skip, rule 2)
 # FIT_VERY_LOW <= fit < FIT_GOOD        -> intermediate fit (Review, rule 3)
