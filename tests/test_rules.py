@@ -4,7 +4,7 @@ import pytest
 from rentwise import config
 from rentwise.assess import assess
 from rentwise.preferences import Listing, Preference
-from rentwise.price import ComparablesPriceAssessor, PriceAssessment, price_position
+from rentwise.price import PriceAssessment, RidgeKnnPriceAssessor, price_position
 
 
 class FixedPriceAssessor:
@@ -110,7 +110,7 @@ def test_reasons_report_gap_and_comparables():
     assert "10% above" in price_reason and "42 comparable" in price_reason
 
 
-# --- Price position and placeholder assessor ----------------------------------
+# --- Price position and Ridge + KNN assessor ----------------------------------
 
 @pytest.mark.parametrize("asking, expected", [
     (850, "below"), (900, "in_line"), (1100, "in_line"),
@@ -121,39 +121,70 @@ def test_price_position_bands(asking, expected):
 
 
 def _history(n_city: int, n_state_other: int) -> pd.DataFrame:
-    rows = [dict(price=1000 + i, square_feet=900, bedrooms=2, bathrooms=1.0,
+    """Austin, TX listings (similar to `listing()`), other Texas listings, and a
+    same-name city in another state that must never be used."""
+    rows = [dict(price=1400 + 10 * i, square_feet=880 + 5 * i, bedrooms=2, bathrooms=1.0,
                  cityname="Austin", state="TX") for i in range(n_city)]
-    rows += [dict(price=2000, square_feet=900, bedrooms=2, bathrooms=1.0,
-                  cityname="Dallas", state="TX") for _ in range(n_state_other)]
+    rows += [dict(price=1200 + 10 * i, square_feet=850 + 5 * i, bedrooms=2, bathrooms=1.0,
+                  cityname="Dallas", state="TX") for i in range(n_state_other)]
+    rows += [dict(price=600, square_feet=500, bedrooms=1, bathrooms=1.0,
+                  cityname="Houston", state="TX") for _ in range(3)]
     rows += [dict(price=9000, square_feet=900, bedrooms=2, bathrooms=1.0,
                   cityname="Austin", state="MN")]       # same city name, other state
     return pd.DataFrame(rows)
 
 
-def test_comparables_same_city_when_enough():
-    result = ComparablesPriceAssessor(_history(config.MIN_COMPARABLES, 5)).assess(listing())
-    assert result.n_comparables == config.MIN_COMPARABLES
+def test_knn_same_city_when_enough():
+    result = RidgeKnnPriceAssessor(_history(config.MIN_COMPARABLES + 2, 5)).assess(listing())
+    assert result.level == "city"
+    assert result.n_comparables == config.KNN_K
     assert set(result.comparables["cityname"]) == {"Austin"}
     assert set(result.comparables["state"]) == {"TX"}
+    assert result.evidence_sufficient and result.position is not None
+
+
+def test_knn_comparables_closest_first():
+    result = RidgeKnnPriceAssessor(_history(config.MIN_COMPARABLES + 5, 0)).assess(listing())
+    assert result.comparables["distance"].is_monotonic_increasing
+    assert result.mean_distance == pytest.approx(result.comparables["distance"].mean())
+
+
+def test_knn_widens_to_state():
+    result = RidgeKnnPriceAssessor(_history(2, config.MIN_COMPARABLES)).assess(listing())
+    assert result.level == "state"
+    assert result.n_comparables == config.KNN_K
+    assert "MN" not in set(result.comparables["state"])
     assert result.evidence_sufficient
 
 
-def test_comparables_widen_to_state():
-    result = ComparablesPriceAssessor(_history(2, config.MIN_COMPARABLES)).assess(listing())
-    assert result.n_comparables == 2 + config.MIN_COMPARABLES
-    assert result.evidence_sufficient
-
-
-def test_comparables_insufficient_evidence_has_no_position():
-    result = ComparablesPriceAssessor(_history(2, 3)).assess(listing())
+def test_too_few_comparables_is_insufficient_but_keeps_reference():
+    result = RidgeKnnPriceAssessor(_history(2, 3)).assess(listing())
+    assert result.n_comparables == 2 + 3 + 3
     assert not result.evidence_sufficient
     assert result.position is None
-    assert result.n_comparables == 5
+    assert result.reference_rent is not None   # indicative only
 
 
-def test_comparables_exclude_dissimilar_listings():
-    history = _history(config.MIN_COMPARABLES, 0)
-    history.loc[0, "bedrooms"] = 3
-    history.loc[1, "square_feet"] = 2000
-    result = ComparablesPriceAssessor(history).assess(listing())
-    assert result.n_comparables == config.MIN_COMPARABLES - 2
+def test_dissimilar_comparables_are_insufficient():
+    unusual = listing(square_feet=3000, bedrooms=5, bathrooms=3.0)
+    result = RidgeKnnPriceAssessor(_history(config.MIN_COMPARABLES + 2, 0)).assess(unusual)
+    assert result.n_comparables == config.KNN_K
+    assert result.mean_distance > config.MAX_MEAN_DISTANCE
+    assert not result.evidence_sufficient and result.position is None
+    reasons = assess(unusual, GOOD_PREFS, RidgeKnnPriceAssessor(
+        _history(config.MIN_COMPARABLES + 2, 0))).reasons
+    assert any("too dissimilar" in r for r in reasons)
+
+
+def test_no_listings_in_state():
+    result = RidgeKnnPriceAssessor(_history(12, 0)).assess(listing(cityname="Miami", state="FL"))
+    assert result.level == "none" and result.n_comparables == 0
+    assert not result.evidence_sufficient
+
+
+def test_ridge_reference_tracks_local_rents():
+    history = _history(config.MIN_COMPARABLES + 2, config.MIN_COMPARABLES)
+    assessor = RidgeKnnPriceAssessor(history)
+    austin = assessor.reference_rent(listing())
+    dallas = assessor.reference_rent(listing(cityname="Dallas"))
+    assert 1200 < dallas < austin < 1700

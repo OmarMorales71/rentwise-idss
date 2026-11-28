@@ -9,7 +9,11 @@ Writes  results/price_model_comparison.md
 
 Temporal split: listings posted before December 2019 are the training data,
 listings posted in December 2019 (the last collection period) are the test
-data. Models compared: a naive city median, KNN comparables, Ridge regression
+data. Inside the training data, the listings posted from September 2019 form
+the validation period: the candidate models are fitted on the earlier
+listings, the Ridge penalty alpha and the KNN k are chosen on the validation
+period, and the chosen Ridge is refitted on the full training data before it
+is evaluated on the test data. The test data are not used for any choice. Models compared: a naive city median, KNN comparables, Ridge regression
 on log(price) with and without amenities, and a Random Forest on log(price).
 The decision based on these results is explained in
 report/price_model_decision.md.
@@ -33,10 +37,11 @@ DATA = ROOT / "dataset" / "processed" / "apartments_clean.csv"
 OUT = ROOT / "results" / "price_model_comparison.md"
 
 TEST_FROM = "2019-12-01"  # first day of the test period
+VALIDATION_FROM = "2019-09-01"  # first day of the validation period (inside the training data)
 NUM = ["square_feet", "bedrooms", "bathrooms"]
 MIN_COMPARABLES = 10  # below this, KNN widens the search from the city to the state
 KNN_KS = (5, 10, 20)
-RIDGE_ALPHA = 1.0
+RIDGE_ALPHAS = (0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0)  # candidates, chosen on validation
 RF_PARAMS = dict(n_estimators=200, min_samples_leaf=3, n_jobs=-1, random_state=0)
 
 
@@ -91,7 +96,14 @@ def knn_predict(train: pd.DataFrame, test: pd.DataFrame, k: int) -> tuple[np.nda
     return pred, level
 
 
-def ridge_predict(train: pd.DataFrame, test: pd.DataFrame, amenities: list[str]) -> np.ndarray:
+def split_validation(train: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Fitting set (before VALIDATION_FROM) and validation period (from VALIDATION_FROM)."""
+    is_val = train["listed_at"] >= pd.Timestamp(VALIDATION_FROM, tz="UTC")
+    return train[~is_val].reset_index(drop=True), train[is_val].reset_index(drop=True)
+
+
+def ridge_predict(train: pd.DataFrame, test: pd.DataFrame, amenities: list[str],
+                  alpha: float) -> np.ndarray:
     """Ridge on log(price): standardised log area, bedrooms, bathrooms; one-hot city and state."""
     def numeric(d: pd.DataFrame) -> pd.DataFrame:
         return d[NUM].assign(square_feet=np.log(d.square_feet))
@@ -101,7 +113,7 @@ def ridge_predict(train: pd.DataFrame, test: pd.DataFrame, amenities: list[str])
     c_train, c_test = enc.fit_transform(train[["city", "state"]]), enc.transform(test[["city", "state"]])
     X_train = sparse.hstack([((x_train - mu) / sd).to_numpy(), train[amenities].to_numpy(), c_train]).tocsr()
     X_test = sparse.hstack([((x_test - mu) / sd).to_numpy(), test[amenities].to_numpy(), c_test]).tocsr()
-    model = Ridge(alpha=RIDGE_ALPHA).fit(X_train, np.log(train.price))
+    model = Ridge(alpha=alpha).fit(X_train, np.log(train.price))
     return np.exp(model.predict(X_test))
 
 
@@ -146,12 +158,26 @@ def main() -> None:
     args = parser.parse_args()
 
     train, test, amenities = load(args.data)
+
+    # --- Selection on the validation period (test data not used) -----------
+    fit, val = split_validation(train)
+    y_val = val.price.to_numpy()
+    ridge_val = {a: metrics(y_val, ridge_predict(fit, val, [], a)) for a in RIDGE_ALPHAS}
+    alpha = min(RIDGE_ALPHAS, key=lambda a: ridge_val[a]["MAPE"])
+    knn_val = {}
+    for k in KNN_KS:
+        p, _ = knn_predict(fit, val, k)
+        ok = ~np.isnan(p)
+        knn_val[k] = {"Listings with a reference": ok.mean(), **metrics(y_val[ok], p[ok])}
+    best_k = min(KNN_KS, key=lambda k: knn_val[k]["MAPE"])
+
+    # --- Final evaluation on the test data ---------------------------------
     y = test.price.to_numpy()
     knn = {k: knn_predict(train, test, k) for k in KNN_KS}
     p_knn, level = knn[10]
     has_ref, city = ~np.isnan(p_knn), level == "city"
-    p_ridge_amen = ridge_predict(train, test, amenities)
-    p_ridge = ridge_predict(train, test, [])
+    p_ridge_amen = ridge_predict(train, test, amenities, alpha)
+    p_ridge = ridge_predict(train, test, [], alpha)
     p_rf = rf_predict(train, test, amenities)
 
     all_models = {"Naive: city median, same bedrooms": metrics(y, naive_predict(train, test))}
@@ -190,8 +216,26 @@ def main() -> None:
         f"- Test: {len(test):,} listings posted from {TEST_FROM} (December 2019)",
         f"- Test listings in a city that appears in the training data: {test.city.isin(set(train.city)).mean():.1%}",
         f"- KNN: same city, widened to the state below {MIN_COMPARABLES} listings; standardised {', '.join(NUM)}",
-        f"- Ridge: alpha = {RIDGE_ALPHA}; Random Forest: {RF_PARAMS['n_estimators']} trees, "
-        f"min_samples_leaf = {RF_PARAMS['min_samples_leaf']}",
+        f"- Ridge: alpha = {alpha:g}, chosen on the validation period; Random Forest: "
+        f"{RF_PARAMS['n_estimators']} trees, min_samples_leaf = {RF_PARAMS['min_samples_leaf']}",
+        "",
+        "## Selection on the validation period",
+        "",
+        f"- Fitting set: {len(fit):,} training listings posted before {VALIDATION_FROM}",
+        f"- Validation period: {len(val):,} training listings posted from {VALIDATION_FROM} to before {TEST_FROM}",
+        f"- Validation listings in a city that appears in the fitting set: "
+        f"{val.city.isin(set(fit.city)).mean():.1%}",
+        "- Criterion: lowest MAPE on the validation period. The test data are not used.",
+        "",
+        "### Ridge without amenities, by alpha",
+        "",
+        md_table([(f"alpha = {a:g}" + (" (chosen)" if a == alpha else ""), m) for a, m in ridge_val.items()],
+                 first="Ridge"),
+        "",
+        "### KNN, reference = median of the k nearest listings, by k",
+        "",
+        md_table([(f"k = {k}" + (" (lowest MAPE)" if k == best_k else ""), m) for k, m in knn_val.items()],
+                 first="KNN"),
         "",
         "## All models",
         "",

@@ -2,16 +2,16 @@
 
 Typical use (UI, Task 9 integration):
 
-    from rentwise import assess, Listing, Preference, ComparablesPriceAssessor
-    result = assess(listing, preferences, ComparablesPriceAssessor(df))
+    from rentwise import assess, Listing, Preference, RidgeKnnPriceAssessor
+    result = assess(listing, preferences, RidgeKnnPriceAssessor(df))
 """
 
 from rentwise.assess import Assessment, assess
 from rentwise.fit import FitResult, personal_fit
 from rentwise.preferences import Listing, Preference
-from rentwise.price import ComparablesPriceAssessor, PriceAssessment, PriceAssessor
+from rentwise.price import PriceAssessment, PriceAssessor, RidgeKnnPriceAssessor
 
 __all__ = [
     "Assessment", "assess", "FitResult", "personal_fit", "Listing", "Preference",
-    "ComparablesPriceAssessor", "PriceAssessment", "PriceAssessor",
+    "PriceAssessment", "PriceAssessor", "RidgeKnnPriceAssessor",
 ]

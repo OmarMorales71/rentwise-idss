@@ -1,9 +1,10 @@
-"""System parameters of the knowledge-based component.
+"""System parameters of the IDSS.
 
 Every number that shapes a recommendation lives here, so that the values can be
-found, discussed and tuned in one place. They are INITIAL VALUES chosen by the
-team from common sense and the dataset summary in dataset/README.md. They have
-not been validated yet: Task 7 (validation) is expected to tune them.
+found, discussed and tuned in one place. Unless a comment says it was selected
+in validation, a value is an INITIAL VALUE chosen by the team from common sense
+and the dataset summary in dataset/README.md; validation (report, Chapter 6)
+tunes them.
 """
 
 # ---------------------------------------------------------------------------
@@ -44,18 +45,24 @@ IN_LINE_BAND = 0.10
 MODERATE_BAND = 0.25
 
 # ---------------------------------------------------------------------------
-# Comparable listings (placeholder price assessor, until Task 5 is merged)
+# Price assessment models (report, Chapter 5)
 # ---------------------------------------------------------------------------
 
-# Below this number of comparables the evidence is insufficient and no price
-# judgement is made.
+# Ridge penalty, selected on the validation period (Sep-Nov 2019) by
+# scripts/compare_price_models.py.
+RIDGE_ALPHA = 1.0
+
+# Number of comparable listings retrieved by KNN.
+KNN_K = 10
+
+# A city needs at least this many listings to supply the comparables; below it
+# the search is widened to the state.
 MIN_COMPARABLES = 10
 
-# A historical listing is comparable when it has the same number of bedrooms,
-# a number of bathrooms within this distance, and a floor area within this
-# relative distance of the listing under assessment.
-COMPARABLE_BATHROOMS_DIFF = 0.5
-COMPARABLE_SQUARE_FEET_DIFF = 0.25
+# Evidence is sufficient when KNN finds KNN_K comparables AND their mean
+# standardised distance (floor area, bedrooms, bathrooms) to the listing is at
+# most this value. INITIAL VALUE: to be calibrated in validation (Chapter 6).
+MAX_MEAN_DISTANCE = 1.5
 
 # ---------------------------------------------------------------------------
 # Recommendation thresholds on the personal-fit score (0..1)

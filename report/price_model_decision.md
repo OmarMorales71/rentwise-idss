@@ -54,10 +54,10 @@ One consequence to accept: the reference (1,500) does not have to equal the medi
 - Models:
   - Naive baseline: median price in the same city with the same number of bedrooms (falls back to the city, then the state).
   - KNN: candidates from the same city, widened to the state when the city has fewer than 10 listings; distance on standardised floor area, bedrooms and bathrooms; reference = median price of the k nearest listings; k = 5, 10, 20.
-  - Ridge (alpha = 1.0) on log(price): standardised log floor area, bedrooms and bathrooms, plus one-hot city and state; tested with and without the 27 amenity indicators.
+  - Ridge (alpha = 1, chosen on the validation period) on log(price): standardised log floor area, bedrooms and bathrooms, plus one-hot city and state; tested with and without the 27 amenity indicators.
   - Random Forest (200 trees, min_samples_leaf = 3) on log(price): floor area, bedrooms, bathrooms, coordinates, state, city mean log price (computed on the training data only), and amenities.
 - Metrics on the test listings: MAE (USD), MAPE, median absolute percentage error (MdAPE), and the share of listings whose asking rent is within ±10% and ±25% of the predicted reference.
-- No hyperparameter tuning. A single split.
+- Selection: the Ridge alpha (nine values, 0.01 to 100) and the KNN k (5, 10, 20) are chosen on a validation period inside the training data (fit on listings before September 2019, validate on September–November 2019), by lowest MAPE. alpha = 1 is selected; k = 10 is kept (the three values differ by less than one point of MAPE). The test data are not used for any choice. Random Forest settings are not tuned.
 
 ## 4. Results
 
@@ -154,5 +154,5 @@ The influence diagram does not change: the arc "Comparable evidence → Price po
 
 ## 7. Limitations of the test
 
-- A single temporal split and no hyperparameter tuning (Ridge alpha, KNN features and weighting, Random Forest settings). An improved KNN, for example with distance weighting, could narrow the gap, but is unlikely to overtake Ridge.
+- A single temporal split. Ridge alpha and KNN k are selected on a validation period; KNN features and weighting and the Random Forest settings are not tuned. An improved KNN, for example with distance weighting, could narrow the gap, but is unlikely to overtake Ridge.
 - The results depend on the temporal split chosen in `scripts/compare_price_models.py` (test = December 2019). Chapter 6 should report them together with this choice.

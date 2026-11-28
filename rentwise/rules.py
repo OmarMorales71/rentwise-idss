@@ -34,6 +34,16 @@ def _names(criteria: list[str]) -> str:
     return ", ".join(criterion_label(c) for c in criteria)
 
 
+def _evidence_problem(price: PriceAssessment) -> str:
+    """Why the comparable evidence is insufficient: too few or too dissimilar."""
+    if price.n_comparables < config.KNN_K:
+        return f"{price.n_comparables} comparables, at least {config.KNN_K} needed"
+    if price.mean_distance is not None:
+        return (f"comparables too dissimilar: mean distance {price.mean_distance:.2f}, "
+                f"at most {config.MAX_MEAN_DISTANCE:.2f} allowed")
+    return "comparables too dissimilar"
+
+
 def recommend(fit: FitResult, price: PriceAssessment,
               asking_rent: float) -> tuple[Recommendation, str, list[str]]:
     """Return (recommendation, rule id, human-readable reasons)."""
@@ -63,8 +73,7 @@ def recommend(fit: FitResult, price: PriceAssessment,
             reasons.append("R3: a non-negotiable criterion cannot be verified from the "
                            f"listing: {_names(fit.unverifiable_non_negotiable)}.")
         if not price.evidence_sufficient:
-            reasons.append(f"R3: insufficient comparable evidence ({price.n_comparables} "
-                           f"comparables, at least {config.MIN_COMPARABLES} needed); "
+            reasons.append(f"R3: insufficient comparable evidence ({_evidence_problem(price)}); "
                            "no price judgement is made.")
         if moderately_above:
             reasons.append("R3: the asking rent is moderately above the reference.")
@@ -101,8 +110,8 @@ def recommend(fit: FitResult, price: PriceAssessment,
                            f"from {price.n_comparables} comparable listings.")
         else:
             reasons.append(f"Price (indicative only, not used in the decision): asking "
-                           f"${asking_rent:,.0f} is {rel} the median {reference} of only "
-                           f"{price.n_comparables} comparable listings.")
+                           f"${asking_rent:,.0f} is {rel} the reference {reference}, "
+                           f"but the comparable evidence is insufficient.")
     else:
         reasons.append("Price: no comparable listings found.")
 

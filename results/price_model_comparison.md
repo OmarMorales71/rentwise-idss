@@ -8,7 +8,36 @@ The decision based on these results is explained in `report/price_model_decision
 - Test: 7,141 listings posted from 2019-12-01 (December 2019)
 - Test listings in a city that appears in the training data: 87.8%
 - KNN: same city, widened to the state below 10 listings; standardised square_feet, bedrooms, bathrooms
-- Ridge: alpha = 1.0; Random Forest: 200 trees, min_samples_leaf = 3
+- Ridge: alpha = 1, chosen on the validation period; Random Forest: 200 trees, min_samples_leaf = 3
+
+## Selection on the validation period
+
+- Fitting set: 43,765 training listings posted before 2019-09-01
+- Validation period: 36,546 training listings posted from 2019-09-01 to before 2019-12-01
+- Validation listings in a city that appears in the fitting set: 66.9%
+- Criterion: lowest MAPE on the validation period. The test data are not used.
+
+### Ridge without amenities, by alpha
+
+| Ridge | MAE (USD) | MAPE | MdAPE | Within ±10% | Within ±25% |
+|---|---|---|---|---|---|
+| alpha = 0.01 | 343 | 20.4% | 16.7% | 31.8% | 67.7% |
+| alpha = 0.03 | 343 | 20.4% | 16.7% | 31.8% | 67.7% |
+| alpha = 0.1 | 343 | 20.4% | 16.7% | 32.0% | 67.9% |
+| alpha = 0.3 | 343 | 20.3% | 16.6% | 32.3% | 68.3% |
+| alpha = 1 (chosen) | 343 | 20.2% | 16.4% | 32.7% | 68.7% |
+| alpha = 3 | 346 | 20.2% | 16.4% | 32.8% | 68.6% |
+| alpha = 10 | 354 | 20.6% | 16.8% | 32.2% | 67.5% |
+| alpha = 30 | 368 | 21.2% | 17.6% | 30.7% | 65.7% |
+| alpha = 100 | 389 | 22.2% | 18.4% | 29.1% | 63.3% |
+
+### KNN, reference = median of the k nearest listings, by k
+
+| KNN | Listings with a reference | MAE (USD) | MAPE | MdAPE | Within ±10% | Within ±25% |
+|---|---|---|---|---|---|---|
+| k = 5 | 98.3% | 386 | 23.7% | 18.1% | 29.9% | 63.6% |
+| k = 10 | 98.3% | 375 | 23.1% | 17.9% | 30.3% | 64.3% |
+| k = 20 (lowest MAPE) | 98.3% | 369 | 22.8% | 17.8% | 29.9% | 64.7% |
 
 ## All models
 

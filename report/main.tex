@@ -1044,39 +1044,329 @@ copies of one advertisement from appearing in both sets.
 \chapter{Data-driven IDSS Models}
 \label{ch:datadriven}
 
-\section{Modelling Objectives}
-[Explain which decision-support tasks are addressed by data-driven modelling and why the selected approaches are appropriate.]
+This chapter describes the data-driven component of RentWise: the models
+that carry out the price assessment (A1) of \Cref{ch:decisions}. The
+modelling dataset, its target, its inputs, and the temporal split between
+training and test data are those defined in \Cref{sec:modelling-dataset}.
+The validation of the models and the calibration of their parameters are
+reported in \Cref{ch:validation}.
 
-\section{Model 1: [Model name]}
+\section{Modelling Objectives}
+\label{sec:modelling-objectives}
+
+The price assessment (A1) is the only assessment of the IDSS that is learned
+from data. The personal-fit assessment (A2) and the recommendation (A3) are
+knowledge-based and are described in \Cref{ch:modeldriven}. A1 answers
+whether the asking rent of a listing is reasonable for what it offers, and
+it involves three tasks, each assigned to the model best suited to it:
+
+\begin{enumerate}[leftmargin=*]
+  \item Estimating the reference asking rent of the listing, the value
+  against which its asking rent is compared. This task requires accuracy,
+  and it is carried out by a Ridge regression model.
+  \item Retrieving the comparable listings that are shown to the renter as
+  evidence. This task requires real listings that the renter can inspect,
+  and it is carried out by K-nearest neighbours (KNN).
+  \item Judging whether the comparable evidence is sufficient for a price
+  judgement. This task depends on how many comparable listings exist and how
+  similar they are to the listing, and it is also carried out by KNN.
+\end{enumerate}
+
+The division follows the two requirements that \Cref{ch:decisions,ch:architecture}
+place on A1. The reference must be as close as possible to the asking rents
+of similar apartments, because the price position is read from the gap
+between both. The judgement must also be explainable and must not be issued
+on weak evidence, which protects opportunity preservation (U2). A
+regression model trained on all prepared listings provides the first; a set
+of real, similar listings provides the second.
+
+\section{Model 1: Ridge Regression for the Reference Asking Rent}
+\label{sec:ridge}
+
 \subsection{Method and Rationale}
-[Describe the algorithm, its role in the IDSS, and why it was selected.]
+
+Ridge regression is a linear regression whose coefficients are penalised
+by their squared magnitude. Given the training listings, it finds the
+coefficients $\boldsymbol{\beta}$ that solve
+\begin{equation}
+  \hat{\boldsymbol{\beta}} = \arg\min_{\boldsymbol{\beta}}
+  \;\lVert \mathbf{y} - \mathbf{X}\boldsymbol{\beta} \rVert_2^2
+  + \alpha \lVert \boldsymbol{\beta} \rVert_2^2,
+  \label{eq:ridge}
+\end{equation}
+where $\mathbf{y}$ contains the logarithm of the monthly asking rents,
+$\mathbf{X}$ the input features of the listings, and $\alpha \geq 0$ the
+strength of the penalty.
+
+Three properties make it suitable for the reference asking rent. First, the
+location is encoded with one indicator per city, and many cities have only a
+few listings (\Cref{ch:preprocessing}); the penalty keeps the coefficients
+of those cities close to zero, so that their estimate relies on the state
+and on the size of the apartment rather than on two or three asking rents.
+Second, the model is linear in its inputs, so the effect of each input on
+the reference can be stated directly: an additional bathroom or a city with
+higher rents raises the reference by a fixed percentage. Third, because the
+target is the logarithm of the rent, a coefficient acts as a relative change
+in the rent and the errors of the model are relative, which matches the way
+A1 expresses the gap between the asking rent and the reference.
+
 \subsection{Inputs, Outputs, and Configuration}
-[Specify features, target, important hyperparameters, and output format.]
+
+The inputs are those defined in \Cref{sec:modelling-dataset}: the logarithm
+of the floor area and the numbers of bedrooms and bathrooms, standardised,
+and the city and the state encoded as indicator variables. Amenities are not
+used. A listing in a city that does not appear in the training data has all
+city indicators equal to zero, so its estimate is based on its state and on
+its floor area, bedrooms, and bathrooms.
+
+The model predicts the logarithm of the rent, $\hat{y}$, and the reference
+asking rent is obtained by reversing the transformation:
+\begin{equation}
+  \hat{r} = \exp(\hat{y}).
+  \label{eq:reference}
+\end{equation}
+Since the model fits the logarithm of the rent, $\hat{r}$ is the typical
+asking rent of comparable apartments, in the sense of a median, rather than
+their mean, which would be slightly higher. This is the value the renter
+needs: the rent that an apartment like the one under assessment usually
+asks. The reference is expressed in USD of 2018--2019, as stated in
+\Cref{ch:decisions}.
+
+The only hyperparameter is the penalty strength $\alpha$, selected on the
+validation period as described below.
+
 \subsection{Training Procedure}
-[Describe the training process, validation strategy, and software used.]
-\subsection{Results}
-[Present relevant results using tables or figures. Explain what the results mean for the decisions supported.]
+\label{sec:training-procedure}
+
+The training set of \Cref{sec:modelling-dataset}, the 80,311 listings posted
+before December 2019, is divided by time into two parts. The listings posted
+before September 2019 (43,765) form the fitting set, on which the candidate
+models are trained, and those posted between September and November 2019
+(36,546) form the validation period, on which the hyperparameters of
+\Cref{sec:ridge,sec:knn} and the parameters of \Cref{ch:validation} are
+chosen. The test set, the 7,141 listings of December 2019, is not used for
+any choice and is evaluated once, with the final models, in
+\Cref{ch:validation}. The division reproduces the use of the system at every
+stage: each model is always evaluated on listings newer than those it was
+built from.
+
+Ridge is fitted for nine candidate values of $\alpha$ on a logarithmic grid
+from 0.01 to 100, and the value with the lowest mean absolute percentage error on the
+validation period is retained. The standardisation and the indicator
+encodings are computed on the fitting set only. Once $\alpha$ is fixed, the
+model is fitted again on the full training set and evaluated on the test
+set. The model is implemented as a Scikit-learn pipeline that contains the
+standardisation, the encoding, and the regression, so that the same
+transformations are applied when a new listing is assessed.
+
+\section{Model 2: K-Nearest Neighbours for the Comparable Listings}
+\label{sec:knn}
+
+\subsection{Method and Rationale}
+
+KNN retrieves, for the listing under assessment, the historical listings
+that are closest to it in a space of standardised attributes. It is used for
+two of the tasks of A1: retrieving the comparable listings that are shown to
+the renter, and judging whether they are sufficient for a price judgement.
+Its value lies in what it returns, real advertisements that the renter can
+inspect and compare with the one under assessment, which makes the price
+judgement verifiable. It does not estimate the reference: the asking rents of
+a few neighbours are a less accurate reference than a model trained on all
+prepared listings, as the comparison in \Cref{ch:validation} shows. The
+reference shown to the renter therefore need not equal the median of the
+comparable listings, and the interface presents it as based on listings
+similar to the one under assessment.
+
+\subsection{Inputs, Outputs, and Configuration}
+
+The candidate listings are those of the same city as the listing under
+assessment. When the city has fewer than ten prepared listings, the
+candidates are those of the same state, as stated in
+\Cref{sec:modelling-dataset}. Location is matched by this restriction and not
+by distance, because the coordinates of most cities are a single point
+(\Cref{ch:preprocessing}).
+
+Among the candidates, the distance between the listing $q$ and a candidate
+$j$ is the Euclidean distance over the standardised floor area, bedrooms,
+and bathrooms:
+\begin{equation}
+  d(q, j) = \sqrt{\sum_{f \in \{\text{area},\,\text{bedrooms},\,\text{bathrooms}\}}
+  \left( z_{q,f} - z_{j,f} \right)^2 },
+  \label{eq:knn-distance}
+\end{equation}
+where $z_{\cdot,f}$ is the value of attribute $f$ standardised with the mean
+and standard deviation of the training listings. The $k$ candidates with the
+smallest distance are the comparable listings. The output of KNN is the set
+of comparable listings, the level at which they were found (city or state),
+their number $n$, and their mean distance to the listing,
+\begin{equation}
+  \bar{d} = \frac{1}{n} \sum_{j=1}^{n} d(q, j).
+  \label{eq:mean-distance}
+\end{equation}
+
+The number of neighbours is $k = 10$, the same as the minimum number of
+listings that a city must have before the search is widened to the state.
+The value is checked on the validation period against $k = 5$ and $k = 20$,
+using the median asking rent of the $k$ neighbours as an estimate of the
+rent: if the comparable listings are representative of the listing, their
+median should be close to its asking rent.
+
+\subsection{Evidence Sufficiency}
+\label{sec:evidence-sufficiency}
+
+\Cref{ch:decisions} states that the IDSS withholds the price judgement when
+the comparable set is too small or too dissimilar. KNN implements both
+conditions. The evidence is sufficient if and only if
+\begin{equation}
+  n \geq k \quad \text{and} \quad \bar{d} \leq d_{\max},
+  \label{eq:sufficiency}
+\end{equation}
+that is, if ten comparable listings are found in the city or, failing that,
+in the state, and they are, on average, close to the listing under
+assessment. The first condition fails when even the state has fewer than ten
+listings; the second when the listing is unusual for its area, for instance
+a five-bedroom apartment in a city where almost all listings have one or
+two bedrooms. The threshold $d_{\max}$ is a parameter of the system,
+calibrated in \Cref{ch:validation} from the relationship between the mean
+distance of the comparables and the error of the reference on the
+validation period.
+
+When the evidence is insufficient, A1 issues no price position, even though
+Ridge can produce a reference for any listing. The comparable listings that
+were found are still shown, together with the reason why they do not
+support a judgement, and the recommendation follows the rules of
+\Cref{ch:decisions}.
+
+\section{Results}
+\label{sec:datadriven-results}
+
+The hyperparameters of both models are selected on the validation period of
+\Cref{sec:training-procedure}, with the mean absolute percentage error
+(MAPE) as criterion. Table~\ref{tab:modelresults} reports the candidates, the
+selected values, and their error on the validation period.
 
 \begin{table}[H]
 \centering
-\caption{Example model evaluation results. Replace metrics with those appropriate to your task.}
+\caption{Hyperparameters selected on the validation period
+(September--November 2019). The fitting set contains the 43,765 listings
+posted before September 2019; the validation period, 36,546 listings.}
 \label{tab:modelresults}
-\begin{tabular}{lc}
+\begin{tabularx}{\textwidth}{p{1.4cm} p{3.9cm} p{1.7cm} X}
 \toprule
-\textbf{Metric} & \textbf{Value}\\
+\textbf{Model} & \textbf{Candidates} & \textbf{Selected} &
+\textbf{Error on the validation period}\\
 \midrule
-{[Metric 1]} & [Value]\\
-{[Metric 2]} & [Value]\\
-{[Metric 3]} & [Value]\\
+Ridge & Nine values of $\alpha$, from 0.01 to 100 & $\alpha = 1$ &
+MAE 343 USD; MAPE 20.2\% (22.2\% with $\alpha = 100$)\\
+\addlinespace
+KNN & $k \in \{5, 10, 20\}$ & $k = 10$ &
+MAPE of the median of the neighbours: 23.7\%, 23.1\%, and 22.8\%\\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{table}
 
-\section{Additional Models (if applicable)}
-[Repeat the previous model structure for each additional model. Include descriptive, discriminant, predictive, or associative models as appropriate.]
+The error of Ridge changes little for values of $\alpha$ between 0.01 and 3,
+with a MAPE between 20.2\% and 20.4\%, and grows for larger values, which
+pull the coefficients of the cities towards zero and lose the differences in
+rent between them. The value $\alpha = 1$ gives the lowest error. The error
+on the validation period is higher than on the test set, partly
+because only 66.9\% of the validation listings are in a city that appears in
+the fitting set, while 87.8\% of the test listings are in a city of the full
+training set (\Cref{sec:modelling-dataset}).
+
+For KNN, the three values of $k$ differ by less than one percentage point.
+Since the error does not favour any value clearly, $k$ is set by its role in
+the IDSS: ten listings are a set that the renter can inspect one by one, and
+the value coincides with the minimum number of listings that a city must have
+before the search is widened to the state, so that a city that meets that
+minimum can always supply a full set of comparables.
+
+For the decisions of the renter, these results mean that the reference of A1
+is the estimate of a model trained on all prepared listings, while the
+evidence that the renter sees, and the decision of whether to judge the price
+at all, rest on real comparable listings. The accuracy of the reference on
+the test set, its comparison with simpler and more complex alternatives, its
+behaviour over time, and the calibration of $d_{\max}$ and of the price bands
+are reported in \Cref{ch:validation}.
 
 \section{Model Output and Integration}
-[Explain how trained models are represented and used at system runtime. For example, describe how a trained decision tree is converted into machine-readable rules and evaluated on new cases.]
+\label{sec:datadriven-integration}
+
+For each listing, A1 combines the two models in a fixed sequence, shown in
+Figure~\ref{fig:a1-flow}. KNN first retrieves the comparable listings and
+judges whether the evidence is sufficient. If it is not, A1 ends without a
+price position. Otherwise, Ridge estimates the reference asking rent
+$\hat{r}$ with \Cref{eq:reference}, and the gap between the asking rent $p$
+and the reference is computed as
+\begin{equation}
+  g = \frac{p - \hat{r}}{\hat{r}}.
+  \label{eq:gap}
+\end{equation}
+The gap places the asking rent in one of the four positions of
+\Cref{ch:decisions}:
+\begin{equation}
+  \text{position} =
+  \begin{cases}
+    \text{below the reference} & \text{if } g < -b_{1},\\
+    \text{in line with it} & \text{if } -b_{1} \leq g \leq b_{1},\\
+    \text{moderately above it} & \text{if } b_{1} < g \leq b_{2},\\
+    \text{significantly above it} & \text{if } g > b_{2},
+  \end{cases}
+  \label{eq:bands}
+\end{equation}
+where $0 < b_{1} < b_{2}$ are the price bands, parameters of the system
+derived in \Cref{ch:validation} from the gaps observed between asking rents
+and their reference values.
+
+The outcome of A1 is the one listed in Table~\ref{tab:decisions}: the price
+position, or no judgement if the evidence is insufficient; whether the
+evidence is sufficient; the reference asking rent; the gap; and the
+comparable listings used, with the level at which they were found. This
+outcome is the only information that the recommendation (A3) receives from
+the data-driven component, as described in \Cref{ch:modeldriven}.
+
+At runtime, the models are not retrained for each assessment. After
+validation and testing, the Ridge pipeline is fitted on all prepared
+listings and the standardisation of the KNN attributes is computed on the
+same data. Both are stored and loaded when the interface starts. Assessing a
+listing then requires only a nearest-neighbour search within its city or
+state and one prediction of the regression model, so the result is
+available immediately to the renter.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=0.65cm and 1.0cm,>=Stealth]
+  \tikzset{
+    a1node/.style={draw=linkblue,fill=blue!5,rounded corners=2pt,
+      text width=6.4cm,minimum height=0.9cm,align=center,font=\small},
+    a1out/.style={draw=black!65,fill=gray!8,rounded corners=2pt,
+      text width=3.8cm,minimum height=0.9cm,align=center,font=\small},
+    a1dec/.style={diamond,aspect=2.4,draw=black!65,fill=yellow!12,
+      align=center,font=\small,inner sep=1pt},
+    a1line/.style={-{Stealth[length=2mm]},thick}
+  }
+  \node[a1node] (listing) {Apartment listing\\(location, area, bedrooms, bathrooms, asking rent)};
+  \node[a1node,below=of listing] (knn) {KNN: $k$ nearest listings in the city\\(state if the city has fewer than ten)};
+  \node[a1dec,below=of knn] (suff) {$n \geq k$ and\\$\bar{d} \leq d_{\max}$?};
+  \node[a1out,right=of suff] (nojudge) {No price position:\\evidence insufficient};
+  \node[a1node,below=of suff] (ridge) {Ridge: reference asking rent\\$\hat{r} = \exp(\hat{y})$};
+  \node[a1node,below=of ridge] (gap) {Gap $g = (p - \hat{r})/\hat{r}$\\and price bands $b_1$, $b_2$};
+  \node[a1node,below=of gap] (out) {Outcome of A1: price position,\\reference, gap, and comparable listings};
+  \node[a1out,below=of out] (a3) {Recommendation (A3)};
+  \draw[a1line] (listing) -- (knn);
+  \draw[a1line] (knn) -- (suff);
+  \draw[a1line] (suff) -- node[above,font=\small]{no} (nojudge);
+  \draw[a1line] (suff) -- node[right,font=\small]{yes} (ridge);
+  \draw[a1line] (ridge) -- (gap);
+  \draw[a1line] (gap) -- (out);
+  \draw[a1line] (nojudge) |- (out);
+  \draw[a1line] (out) -- (a3);
+\end{tikzpicture}
+\caption{Sequence of the price assessment (A1): KNN retrieves the comparable
+listings and judges the evidence; Ridge estimates the reference asking rent
+only when the evidence is sufficient.}
+\label{fig:a1-flow}
+\end{figure}
 
 % ============================================================
 % 6. POSTPROCESSING AND VALIDATION

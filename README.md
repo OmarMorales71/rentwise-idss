@@ -75,18 +75,18 @@ The app opens at http://localhost:8501. Pick an example preset in the sidebar (S
 From Python, the whole assessment is one call:
 
 ```python
-from rentwise import assess, Listing, Preference, ComparablesPriceAssessor
+from rentwise import assess, Listing, Preference, RidgeKnnPriceAssessor
 from rentwise.data import load_listings
 
 listing = Listing(price=1200, square_feet=950, bedrooms=2, bathrooms=2.0,
                   cityname="Houston", state="TX", amenities={"amenity_parking"},
                   cats_allowed=True, dogs_allowed=None)
 prefs = [Preference("budget", 1400, 0.8), Preference("dogs", weight=1.0)]
-result = assess(listing, prefs, ComparablesPriceAssessor(load_listings()))
+result = assess(listing, prefs, RidgeKnnPriceAssessor(load_listings()))
 print(result.recommendation, result.reasons)
 ```
 
-`ComparablesPriceAssessor` is a placeholder (median rent of similar listings in the same city or state). Task 5's model replaces it by implementing the `PriceAssessor` protocol in `rentwise/price.py`: a class with `assess(listing) -> PriceAssessment`.
+`RidgeKnnPriceAssessor` (`rentwise/price.py`) is the price assessment A1 (report, Chapter 5): Ridge regression on log(price) estimates the reference rent, and KNN retrieves the 10 most similar listings (same city, or the state if the city has fewer than 10) and judges whether the evidence is sufficient (10 comparables and mean distance at most `MAX_MEAN_DISTANCE`). Any class with `assess(listing) -> PriceAssessment` can replace it (the `PriceAssessor` protocol).
 
 ## Proposed methods and tools
 

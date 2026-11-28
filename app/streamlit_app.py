@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
 
-from rentwise import ComparablesPriceAssessor, Listing, Preference, assess  # noqa: E402
+from rentwise import Listing, Preference, RidgeKnnPriceAssessor, assess  # noqa: E402
 from rentwise.data import load_listings  # noqa: E402
 from rentwise.preferences import (  # noqa: E402
     AMENITY_CRITERIA, NUMERIC_CRITERIA, PET_CRITERIA, criterion_label,
@@ -65,9 +65,9 @@ def get_listings() -> pd.DataFrame:
 
 
 @st.cache_resource
-def get_price_assessor() -> ComparablesPriceAssessor:
-    # Placeholder until Task 5's model is available: swap the assessor here.
-    return ComparablesPriceAssessor(get_listings())
+def get_price_assessor() -> RidgeKnnPriceAssessor:
+    # Fitted once on all prepared listings when the interface starts.
+    return RidgeKnnPriceAssessor(get_listings())
 
 
 def apply_preset(name: str) -> None:
@@ -242,11 +242,12 @@ with price_col:
 
 st.subheader("Comparable listings used")
 if price.n_comparables:
-    show = ["title", "price", "square_feet", "bedrooms", "bathrooms", "cityname", "state", "listed_at"]
-    st.dataframe(price.comparables[[c for c in show if c in price.comparables]].head(100),
+    show = ["title", "price", "square_feet", "bedrooms", "bathrooms", "cityname", "state",
+            "listed_at", "distance"]
+    st.dataframe(price.comparables[[c for c in show if c in price.comparables]],
                  hide_index=True, width="stretch")
-    if price.n_comparables > 100:
-        st.caption(f"Showing the 100 closest in floor area out of {price.n_comparables}.")
+    st.caption("Closest first. The reference rent is estimated from all prepared listings, "
+               "so it need not equal the median of these comparables.")
 else:
     st.info("No comparable listings found in the dataset.")
 
